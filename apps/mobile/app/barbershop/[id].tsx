@@ -1,0 +1,259 @@
+import React from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  Image, 
+  TouchableOpacity,
+  ActivityIndicator,
+  SafeAreaView,
+  FlatList
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import { Colors, Spacing, Radius } from '../../src/theme';
+import { BarbershopService } from '../../src/services/barbershops';
+import { ServiceItem } from '../../src/components/ServiceItem';
+import { ChevronLeft, Star, MapPin, Phone, MessageCircle } from 'lucide-react-native';
+
+export default function BarbershopDetails() {
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
+
+  const { data: shop, isLoading } = useQuery({
+    queryKey: ['barbershop', id],
+    queryFn: () => BarbershopService.getDetails(Number(id)),
+  });
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Imagem de Capa */}
+        <View style={styles.imageContainer}>
+          <Image 
+            source={{ uri: shop?.photos?.[0]?.url || 'https://via.placeholder.com/400x300' }} 
+            style={styles.coverImage} 
+          />
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => router.back()}
+          >
+            <ChevronLeft size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.content}>
+          {/* Header Info */}
+          <View style={styles.header}>
+            <View style={styles.titleRow}>
+              <Text style={styles.name}>{shop?.name}</Text>
+              <View style={styles.ratingBox}>
+                <Star size={16} color={Colors.secondary} fill={Colors.secondary} />
+                <Text style={styles.ratingText}>{shop?.average_rating?.toFixed(1)}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.infoRow}>
+              <MapPin size={16} color={Colors.textSecondary} />
+              <Text style={styles.address}>{shop?.address}, {shop?.city}</Text>
+            </View>
+
+            <View style={styles.actionButtons}>
+              <TouchableOpacity style={styles.actionButton}>
+                <Phone size={20} color={Colors.primary} />
+                <Text style={styles.actionText}>Ligar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionButton}>
+                <MessageCircle size={20} color={Colors.primary} />
+                <Text style={styles.actionText}>WhatsApp</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Descrição */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Sobre</Text>
+            <Text style={styles.description}>
+              {shop?.description || "Uma barbearia moderna com os melhores profissionais de Angola."}
+            </Text>
+          </View>
+
+          {/* Horários */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Horário de Funcionamento</Text>
+            <View style={styles.hoursBox}>
+              <Text style={styles.hoursText}>{shop?.open_hours || "Seg-Sáb: 08:00 - 19:00"}</Text>
+            </View>
+          </View>
+
+          {/* Serviços */}
+          <View style={[styles.section, styles.servicesSection]}>
+            <Text style={styles.sectionTitle}>Nossos Serviços</Text>
+            {shop?.services?.map((service: any) => (
+              <ServiceItem
+                key={service.id}
+                name={service.name}
+                price={service.price}
+                duration={service.duration_minutes}
+                onPress={() => {
+                  router.push({
+                    pathname: '/booking/create',
+                    params: {
+                      barbershopId: shop.id,
+                      serviceId: service.id,
+                      serviceName: service.name,
+                      price: service.price
+                    }
+                  });
+                }}
+              />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageContainer: {
+    height: 250,
+    width: '100%',
+    position: 'relative',
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    flex: 1,
+    marginTop: -Spacing.lg,
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    padding: Spacing.xl,
+  },
+  header: {
+    marginBottom: Spacing.lg,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  name: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: Colors.primary,
+    flex: 1,
+    marginRight: Spacing.sm,
+  },
+  ratingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: Spacing.md,
+  },
+  address: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    flex: 1,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  actionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  section: {
+    marginTop: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginBottom: Spacing.md,
+  },
+  description: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    lineHeight: 22,
+  },
+  hoursBox: {
+    backgroundColor: Colors.surface,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  hoursText: {
+    fontSize: 15,
+    color: Colors.text,
+    fontWeight: '500',
+  },
+  servicesSection: {
+    marginBottom: Spacing.xxl,
+  }
+});

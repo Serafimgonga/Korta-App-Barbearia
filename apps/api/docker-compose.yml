@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: korta_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: korta_user
+      POSTGRES_PASSWORD: korta_pass
+      POSTGRES_DB: korta_db
+    ports:
+      - "5433:5432" # Mapeia a porta 5433 externa para a 5432 interna do container
+    volumes:
+      - korta_db_data:/var/lib/postgresql/data
+
+volumes:
+  korta_db_data:

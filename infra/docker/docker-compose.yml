@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: korta_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: korta
+      POSTGRES_PASSWORD: korta123
+      POSTGRES_DB: korta_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - korta_pgdata:/var/lib/postgresql/data
+
+volumes:
+  korta_pgdata:
