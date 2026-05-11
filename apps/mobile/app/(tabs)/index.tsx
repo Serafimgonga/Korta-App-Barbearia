@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -6,29 +6,60 @@ import {
   FlatList, 
   TextInput, 
   RefreshControl,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Colors, Spacing, Radius } from '../../src/theme';
 import { BarbershopService } from '../../src/services/barbershops';
 import { BarbershopCard } from '../../src/components/BarbershopCard';
-import { Search, MapPin } from 'lucide-react-native';
+import { Search, MapPin, Navigation } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
   const [search, setSearch] = useState('');
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+
+      let currentLocation = await Location.getCurrentPositionAsync({});
+      setLocation(currentLocation);
+    })();
+  }, []);
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
-    queryKey: ['barbershops', search],
-    queryFn: () => BarbershopService.listAll({ search }),
+    queryKey: ['barbershops', search, location?.coords.latitude, location?.coords.longitude],
+    queryFn: () => {
+      if (location && !search) {
+        return BarbershopService.getNearby(
+          location.coords.latitude,
+          location.coords.longitude
+        );
+      }
+      return BarbershopService.listAll({ search });
+    },
   });
 
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.locationContainer}>
-        <MapPin size={16} color={Colors.accent} />
-        <Text style={styles.locationText}>Ícolo e Bengo, Angola</Text>
+        <MapPin size={16} color={location ? Colors.success : Colors.accent} />
+        <Text style={styles.locationText}>
+          {location ? 'A tua localização' : 'Ícolo e Bengo, Angola'}
+        </Text>
+        {location && (
+          <View style={styles.nearbyBadge}>
+            <Navigation size={10} color="#FFF" />
+            <Text style={styles.nearbyBadgeText}>PERTO DE TI</Text>
+          </View>
+        )}
       </View>
       
       <View style={styles.searchContainer}>
@@ -107,6 +138,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: Colors.text,
+  },
+  nearbyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.success,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+    marginLeft: Spacing.sm,
+    gap: 4,
+  },
+  nearbyBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#FFF',
   },
   searchContainer: {
     flexDirection: 'row',

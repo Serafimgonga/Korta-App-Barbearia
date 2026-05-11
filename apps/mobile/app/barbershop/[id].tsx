@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
-  FlatList
+  FlatList,
+  Linking
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -25,6 +26,24 @@ export default function BarbershopDetails() {
     queryKey: ['barbershop', id],
     queryFn: () => BarbershopService.getDetails(Number(id)),
   });
+
+  const handleWhatsApp = () => {
+    if (!shop?.whatsapp) {
+      alert('Esta barbearia ainda não disponibilizou o contacto de WhatsApp.');
+      return;
+    }
+    const message = `Olá! Vi a sua barbearia ${shop.name} no app KORTA e gostaria de tirar uma dúvida.`;
+    const url = `whatsapp://send?phone=${shop.whatsapp}&text=${encodeURIComponent(message)}`;
+    
+    Linking.canOpenURL(url).then(supported => {
+      if (supported) {
+        Linking.openURL(url);
+      } else {
+        // Fallback para browser se o app não estiver instalado
+        Linking.openURL(`https://wa.me/${shop.whatsapp}?text=${encodeURIComponent(message)}`);
+      }
+    });
+  };
 
   if (isLoading) {
     return (
@@ -72,7 +91,10 @@ export default function BarbershopDetails() {
                 <Phone size={20} color={Colors.primary} />
                 <Text style={styles.actionText}>Ligar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={handleWhatsApp}
+              >
                 <MessageCircle size={20} color={Colors.primary} />
                 <Text style={styles.actionText}>WhatsApp</Text>
               </TouchableOpacity>
