@@ -10,7 +10,7 @@ import {
   SafeAreaView
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Colors, Spacing, Radius } from '../../src/theme';
+import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import api from '../../src/api/client';
 import { ChevronLeft, Calendar as CalendarIcon, Clock, CheckCircle2 } from 'lucide-react-native';
 
@@ -132,7 +132,7 @@ export default function CreateBooking() {
           disabled={loading || !selectedTime}
         >
           {loading ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={Colors.primaryForeground} />
           ) : (
             <Text style={styles.confirmButtonText}>Confirmar Reserva</Text>
           )}
@@ -157,71 +157,79 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: Colors.primary,
+    fontWeight: '800',
+    color: Colors.foreground,
+    letterSpacing: 0.5,
   },
   content: {
     padding: Spacing.md,
   },
   summaryCard: {
-    backgroundColor: Colors.primary,
-    padding: Spacing.lg,
+    backgroundColor: Colors.surface,
+    padding: Spacing.xl,
     borderRadius: Radius.lg,
     marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadows.elegant,
   },
   summaryLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-    fontWeight: '600',
+    color: Colors.mutedForeground,
+    fontSize: 11,
+    fontWeight: '700',
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: 8,
+    letterSpacing: 1,
   },
   serviceName: {
-    color: '#FFF',
-    fontSize: 24,
-    fontWeight: '800',
-    marginBottom: 4,
+    color: Colors.foreground,
+    fontSize: 26,
+    fontWeight: '900',
+    marginBottom: 6,
   },
   servicePrice: {
-    color: Colors.secondary,
-    fontSize: 18,
-    fontWeight: '700',
+    color: Colors.primary,
+    fontSize: 20,
+    fontWeight: '800',
   },
   section: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.xxl,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: Spacing.md,
+    gap: 10,
+    marginBottom: Spacing.lg,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.foreground,
+    letterSpacing: 0.5,
   },
   dateText: {
-    fontSize: 18,
+    fontSize: 20,
     color: Colors.primary,
-    fontWeight: '600',
+    fontWeight: '800',
     backgroundColor: Colors.surface,
-    padding: Spacing.md,
+    padding: Spacing.lg,
     borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.border,
     textAlign: 'center',
+    ...Shadows.elegant,
   },
   timeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
+    justifyContent: 'space-between',
   },
   timeSlot: {
-    width: '23%',
-    height: 45,
+    width: '30%',
+    height: 54,
     backgroundColor: Colors.surface,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.md,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -232,32 +240,36 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   timeSlotText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.foreground,
   },
   timeSlotTextSelected: {
-    color: '#FFF',
+    color: Colors.primaryForeground,
   },
   footer: {
-    padding: Spacing.md,
+    padding: Spacing.xl,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+    backgroundColor: Colors.background,
   },
   confirmButton: {
     backgroundColor: Colors.primary,
-    height: 56,
-    borderRadius: Radius.md,
+    height: 64,
+    borderRadius: Radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Shadows.gold,
   },
   confirmButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.3,
   },
   confirmButtonText: {
-    color: '#FFF',
+    color: Colors.primaryForeground,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   successContainer: {
     flex: 1,
@@ -267,31 +279,35 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
   },
   successTitle: {
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: 30,
+    fontWeight: '900',
     color: Colors.primary,
     marginTop: Spacing.xl,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   successSubtitle: {
     fontSize: 16,
-    color: Colors.textSecondary,
+    color: Colors.mutedForeground,
     textAlign: 'center',
-    marginTop: Spacing.md,
-    lineHeight: 24,
+    marginTop: Spacing.lg,
+    lineHeight: 26,
   },
   doneButton: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.xl,
-    paddingVertical: 16,
-    borderRadius: Radius.md,
+    paddingVertical: 18,
+    borderRadius: Radius.lg,
     marginTop: Spacing.xxl,
     width: '100%',
     alignItems: 'center',
+    ...Shadows.gold,
   },
   doneButtonText: {
-    color: '#FFF',
+    color: Colors.primaryForeground,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });

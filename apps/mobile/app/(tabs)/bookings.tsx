@@ -9,9 +9,10 @@ import {
   Image 
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Colors, Spacing, Radius } from '../../src/theme';
+import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
+import { useAuthStore } from '../../src/store/auth';
+import { Calendar as CalendarIcon, Clock, Scissors, AlertCircle, MapPin } from 'lucide-react-native';
 import api from '../../src/api/client';
-import { Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react-native';
 
 export default function BookingsScreen() {
   const { data, isLoading, refetch, isRefetching } = useQuery({
@@ -99,91 +100,84 @@ export default function BookingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.background,
   },
   listContent: {
     padding: Spacing.md,
   },
   card: {
-    backgroundColor: '#FFF',
-    borderRadius: Radius.md,
-    padding: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
     marginBottom: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Shadows.elegant,
   },
   cardHeader: {
     marginBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    paddingBottom: Spacing.sm,
   },
   shopInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 4,
   },
   shopName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.primary,
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.foreground,
+    flex: 1,
+    marginRight: Spacing.sm,
   },
   statusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   statusText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   serviceName: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontWeight: '500',
+    fontSize: 15,
+    color: Colors.mutedForeground,
+    fontWeight: '600',
   },
   cardFooter: {
     flexDirection: 'row',
-    gap: 12,
-    paddingTop: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.gray[100],
+    alignItems: 'center',
+    gap: Spacing.lg,
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   detailText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '500',
+    fontSize: 14,
+    color: Colors.foreground,
+    fontWeight: '600',
   },
-  loadingOverlay: {
+  loadingContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: Colors.background,
   },
   emptyContainer: {
     flex: 1,
-    paddingTop: 100,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: Spacing.xxl,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginTop: Spacing.lg,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+  emptyText: {
+    color: Colors.mutedForeground,
+    fontSize: 16,
+    marginTop: Spacing.md,
     textAlign: 'center',
-    marginTop: Spacing.xs,
-  },
 });

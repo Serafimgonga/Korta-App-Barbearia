@@ -11,7 +11,7 @@ import {
   Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors, Spacing, Radius } from '../../src/theme';
+import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { AuthService } from '../../src/services/auth';
 import { Mail, Lock, ArrowRight } from 'lucide-react-native';
 
@@ -81,7 +81,7 @@ export default function LoginScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.textOnPrimary} />
+              <ActivityIndicator color={Colors.primaryForeground} />
             ) : (
               <>
                 <Text style={styles.loginButtonText}>Entrar</Text>
@@ -116,14 +116,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xxl,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
+    fontSize: 34,
+    fontWeight: '900',
     color: Colors.primary,
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 16,
-    color: Colors.textSecondary,
+    color: Colors.mutedForeground,
     marginTop: Spacing.sm,
+    lineHeight: 24,
   },
   form: {
     gap: Spacing.md,
@@ -136,7 +138,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     paddingHorizontal: Spacing.md,
-    height: 56,
+    height: 60,
   },
   inputIcon: {
     marginRight: Spacing.sm,
@@ -144,22 +146,23 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: Colors.text,
+    color: Colors.foreground,
   },
   loginButton: {
     backgroundColor: Colors.primary,
-    height: 56,
+    height: 60,
     borderRadius: Radius.md,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: Spacing.md,
     gap: Spacing.sm,
+    ...Shadows.gold,
   },
   loginButtonText: {
-    color: Colors.textOnPrimary,
+    color: Colors.primaryForeground,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   footer: {
     flexDirection: 'row',
@@ -167,7 +170,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xxl,
   },
   footerText: {
-    color: Colors.textSecondary,
+    color: Colors.mutedForeground,
     fontSize: 14,
   },
   registerLink: {

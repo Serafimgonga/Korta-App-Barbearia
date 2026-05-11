@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Colors, Spacing, Radius } from '../theme';
+import { Colors, Spacing, Radius, Shadows } from '../theme';
 import { Star, MapPin } from 'lucide-react-native';
 
 interface BarbershopCardProps {
@@ -65,15 +65,16 @@ export const BarbershopCard = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     overflow: 'hidden',
     marginBottom: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
+    ...Shadows.elegant,
   },
   imageContainer: {
-    height: 160,
+    height: 180,
     width: '100%',
     position: 'relative',
   },
@@ -82,7 +83,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   placeholder: {
-    backgroundColor: Colors.gray[200],
+    backgroundColor: Colors.surface2,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.sm,
     right: Spacing.sm,
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     borderRadius: Radius.sm,
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
   premiumText: {
     fontSize: 10,
     fontWeight: '900',
-    color: Colors.primary,
+    color: Colors.primaryForeground,
   },
   info: {
     padding: Spacing.md,
@@ -110,9 +111,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   name: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.primary,
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.foreground,
     flex: 1,
     marginRight: Spacing.sm,
   },
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.primary,
   },
   location: {
     flexDirection: 'row',
@@ -134,11 +135,12 @@ const styles = StyleSheet.create({
   },
   address: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: Colors.mutedForeground,
   },
   reviews: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: Colors.mutedForeground,
     fontWeight: '500',
+    letterSpacing: 0.5,
   },
 });

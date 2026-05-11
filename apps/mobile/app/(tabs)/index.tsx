@@ -12,7 +12,7 @@ import {
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Colors, Spacing, Radius } from '../../src/theme';
+import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { BarbershopService } from '../../src/services/barbershops';
 import { BarbershopCard } from '../../src/components/BarbershopCard';
 import { Search, MapPin, Navigation } from 'lucide-react-native';
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text,
+    color: Colors.foreground,
   },
   nearbyBadge: {
     flexDirection: 'row',
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   nearbyBadgeText: {
     fontSize: 9,
     fontWeight: '900',
-    color: '#FFF',
+    color: Colors.background,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -164,18 +164,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: Spacing.lg,
+    ...Shadows.elegant,
   },
   searchInput: {
     flex: 1,
     marginLeft: Spacing.sm,
     fontSize: 16,
-    color: Colors.text,
+    color: Colors.foreground,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     color: Colors.primary,
     marginBottom: Spacing.md,
+    letterSpacing: 1,
   },
   listContent: {
     padding: Spacing.md,
@@ -184,14 +186,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'rgba(13,13,13,0.8)',
   },
   emptyContainer: {
     padding: Spacing.xxl,
     alignItems: 'center',
   },
   emptyText: {
-    color: Colors.textSecondary,
+    color: Colors.mutedForeground,
     fontSize: 16,
   },
 });

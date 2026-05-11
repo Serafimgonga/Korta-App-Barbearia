@@ -1,8 +1,9 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors, Spacing, Radius } from '../../src/theme';
+import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store/auth';
 import { AuthService } from '../../src/services/auth';
-import { User, LogOut, ChevronRight } from 'lucide-react-native';
+import { User as UserIcon, LogOut, ChevronRight, Settings, Bell, Shield } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
 
 export default function ProfileScreen() {
   const user = useAuthStore((state) => state.user);
@@ -50,53 +51,79 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
+    padding: Spacing.xl,
     alignItems: 'center',
-    paddingVertical: Spacing.xxl,
+    backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+    paddingTop: 60,
+    ...Shadows.elegant,
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  avatarContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.md,
+    borderWidth: 2,
+    borderColor: Colors.primary,
   },
-  userName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.primary,
+  name: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: Colors.foreground,
+    letterSpacing: -0.5,
   },
-  userEmail: {
+  email: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: Colors.mutedForeground,
     marginTop: 4,
+    fontWeight: '500',
   },
-  menu: {
-    padding: Spacing.md,
+  content: {
+    padding: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: Colors.primary,
+    marginBottom: Spacing.lg,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
   },
   menuItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   menuItemText: {
     fontSize: 16,
+    color: Colors.foreground,
     fontWeight: '600',
-    color: Colors.text,
   },
   logoutButton: {
-    marginTop: Spacing.xl,
-    borderBottomWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: Spacing.xxl,
+    paddingVertical: Spacing.lg,
+    borderRadius: Radius.md,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   logoutText: {
     fontSize: 16,
-    fontWeight: '700',
     color: Colors.error,
+    fontWeight: '700',
   },
 });

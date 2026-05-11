@@ -1,22 +1,24 @@
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors, Spacing, Radius } from '../src/theme';
+import { Colors, Spacing, Radius, Shadows } from '../src/theme';
 import { Scissors } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar style="light" />
       <View style={styles.content}>
         <View style={styles.logoContainer}>
-          <Scissors size={64} color={Colors.primary} strokeWidth={1.5} />
+          <Scissors size={80} color={Colors.primary} strokeWidth={1} />
           <Text style={styles.title}>KORTA</Text>
-          <Text style={styles.subtitle}>Barbearia na ponta dos dedos</Text>
+          <Text style={styles.subtitle}>URBAN PREMIUM GROOMING</Text>
         </View>
 
         <View style={styles.footer}>
           <TouchableOpacity 
-            style={styles.button}
+            style={[styles.button, Shadows.gold]}
             activeOpacity={0.8}
             onPress={() => router.push('/(auth)/login')}
           >
@@ -47,42 +49,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 42,
+    fontSize: 56,
     fontWeight: '900',
     color: Colors.primary,
-    letterSpacing: 4,
+    letterSpacing: 8,
     marginTop: Spacing.md,
+    fontFamily: Platform.OS === 'ios' ? 'Sora' : 'sans-serif',
   },
   subtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
+    fontSize: 12,
+    color: Colors.mutedForeground,
     marginTop: Spacing.xs,
+    letterSpacing: 4,
+    fontWeight: '600',
   },
   footer: {
     width: '100%',
     alignItems: 'center',
+    paddingBottom: Spacing.xl,
   },
   button: {
     backgroundColor: Colors.primary,
     width: '100%',
-    height: 56,
-    borderRadius: Radius.md,
+    height: 64,
+    borderRadius: Radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
   },
   buttonText: {
-    color: Colors.textOnPrimary,
+    color: Colors.primaryForeground,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   version: {
-    marginTop: Spacing.lg,
-    color: Colors.textSecondary,
-    fontSize: 12,
+    marginTop: Spacing.xl,
+    color: Colors.mutedForeground,
+    fontSize: 11,
+    letterSpacing: 1,
   }
 });
