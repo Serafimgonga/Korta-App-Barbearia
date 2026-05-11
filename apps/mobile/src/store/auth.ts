@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 interface User {
   id: number;
@@ -17,33 +18,75 @@ interface AuthState {
   initialize: () => Promise<void>;
 }
 
+// Utilitário para persistência multiplataforma (iOS/Android/Web)
+const storage = {
+  getItem: async (key: string) => {
+    try {
+      if (Platform.OS === 'web') {
+        return localStorage.getItem(key);
+      }
+      return await SecureStore.getItemAsync(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: async (key: string, value: string) => {
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.setItem(key, value);
+      } else {
+        await SecureStore.setItemAsync(key, value);
+      }
+    } catch (e) {
+      console.error("Erro ao salvar no storage", e);
+    }
+  },
+  removeItem: async (key: string) => {
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.removeItem(key);
+      } else {
+        await SecureStore.deleteItemAsync(key);
+      }
+    } catch (e) {
+      console.error("Erro ao remover do storage", e);
+    }
+  }
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
   isAuthenticated: false,
 
   setAuth: async (user, token) => {
-    await SecureStore.setItemAsync('auth_token', token);
-    await SecureStore.setItemAsync('user_data', JSON.stringify(user));
+    await storage.setItem('auth_token', token);
+    await storage.setItem('user_data', JSON.stringify(user));
     set({ user, token, isAuthenticated: true });
   },
 
   logout: async () => {
-    await SecureStore.deleteItemAsync('auth_token');
-    await SecureStore.deleteItemAsync('user_data');
+    await storage.removeItem('auth_token');
+    await storage.removeItem('user_data');
     set({ user: null, token: null, isAuthenticated: false });
   },
 
   initialize: async () => {
-    const token = await SecureStore.getItemAsync('auth_token');
-    const userData = await SecureStore.getItemAsync('user_data');
+    const token = await storage.getItem('auth_token');
+    const userData = await storage.getItem('user_data');
     
     if (token && userData) {
-      set({ 
-        token, 
-        user: JSON.parse(userData), 
-        isAuthenticated: true 
-      });
+      try {
+        set({ 
+          token, 
+          user: JSON.parse(userData), 
+          isAuthenticated: true 
+        });
+      } catch {
+        // Dados corrompidos
+        await storage.removeItem('auth_token');
+        await storage.removeItem('user_data');
+      }
     }
   },
 }));
