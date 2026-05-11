@@ -76,7 +76,7 @@ export default function BarbershopDetails() {
             <View style={styles.titleRow}>
               <Text style={styles.name}>{shop?.name}</Text>
               <View style={styles.ratingBox}>
-                <Star size={16} color={Colors.secondary} fill={Colors.secondary} />
+                <Star size={16} color={Colors.primary} fill={Colors.primary} />
                 <Text style={styles.ratingText}>{shop?.average_rating?.toFixed(1)}</Text>
               </View>
             </View>

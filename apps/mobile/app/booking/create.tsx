@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
-import api from '../../src/api/client';
+import { BookingService } from '../../src/services/bookings';
 import { ChevronLeft, Calendar as CalendarIcon, Clock, CheckCircle2 } from 'lucide-react-native';
 
 const TIME_SLOTS = [
@@ -35,7 +35,7 @@ export default function CreateBooking() {
 
     setLoading(true);
     try {
-      await api.post('/bookings', {
+      await BookingService.create({
         barbershop_id: Number(barbershopId),
         service_id: Number(serviceId),
         date: selectedDate,
@@ -44,7 +44,8 @@ export default function CreateBooking() {
       });
       setSuccess(true);
     } catch (error: any) {
-      Alert.alert('Erro no Agendamento', error.response?.data?.detail || 'Não foi possível completar a reserva.');
+      const message = error.response?.data?.detail || 'Não foi possível completar o agendamento.';
+      Alert.alert('Erro', message);
     } finally {
       setLoading(false);
     }
