@@ -20,7 +20,7 @@ export const ServiceItem = ({ name, price, duration, onPress }: ServiceItemProps
       <View style={styles.left}>
         <Text style={styles.name}>{name}</Text>
         <View style={styles.durationContainer}>
-          <Clock size={14} color={Colors.textSecondary} />
+          <Clock size={14} color={Colors.mutedForeground} />
           <Text style={styles.durationText}>{duration} min</Text>
         </View>
       </View>

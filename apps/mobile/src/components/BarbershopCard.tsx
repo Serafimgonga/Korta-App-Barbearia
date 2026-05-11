@@ -33,7 +33,7 @@ export const BarbershopCard = ({
           <Image source={{ uri: imageUrl }} style={styles.image} />
         ) : (
           <View style={[styles.image, styles.placeholder]}>
-            <Star size={32} color={Colors.gray[400]} />
+            <Star size={32} color={Colors.mutedForeground} />
           </View>
         )}
         {isPremium && (
@@ -47,13 +47,13 @@ export const BarbershopCard = ({
         <View style={styles.header}>
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
           <View style={styles.rating}>
-            <Star size={14} color={Colors.secondary} fill={Colors.secondary} />
+            <Star size={14} color={Colors.primary} fill={Colors.primary} />
             <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
           </View>
         </View>
 
         <View style={styles.location}>
-          <MapPin size={14} color={Colors.textSecondary} />
+          <MapPin size={14} color={Colors.mutedForeground} />
           <Text style={styles.address} numberOfLines={1}>{address}</Text>
         </View>
 

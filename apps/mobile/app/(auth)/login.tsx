@@ -51,7 +51,7 @@ export default function LoginScreen() {
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Mail size={20} color={Colors.textSecondary} style={styles.inputIcon} />
+            <Mail size={20} color={Colors.mutedForeground} style={styles.inputIcon} />
             <TextInput
               placeholder="Email"
               value={email}
@@ -59,19 +59,19 @@ export default function LoginScreen() {
               style={styles.input}
               autoCapitalize="none"
               keyboardType="email-address"
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={Colors.mutedForeground}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Lock size={20} color={Colors.textSecondary} style={styles.inputIcon} />
+            <Lock size={20} color={Colors.mutedForeground} style={styles.inputIcon} />
             <TextInput
               placeholder="Password"
               value={password}
               onChangeText={setPassword}
               style={styles.input}
               secureTextEntry
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={Colors.mutedForeground}
             />
           </View>
 
@@ -85,7 +85,7 @@ export default function LoginScreen() {
             ) : (
               <>
                 <Text style={styles.loginButtonText}>Entrar</Text>
-                <ArrowRight size={20} color={Colors.textOnPrimary} />
+                <ArrowRight size={20} color={Colors.primaryForeground} />
               </>
             )}
           </TouchableOpacity>

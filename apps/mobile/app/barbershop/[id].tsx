@@ -82,7 +82,7 @@ export default function BarbershopDetails() {
             </View>
             
             <View style={styles.infoRow}>
-              <MapPin size={16} color={Colors.textSecondary} />
+              <MapPin size={16} color={Colors.mutedForeground} />
               <Text style={styles.address}>{shop?.address}, {shop?.city}</Text>
             </View>
 

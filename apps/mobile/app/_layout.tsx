@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "../src/store/auth";
 import { StatusBar } from "expo-status-bar";
+import { Colors } from "../src/theme";
 
 const queryClient = new QueryClient();
 

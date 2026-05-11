@@ -25,12 +25,12 @@ export default function ProfileScreen() {
       <View style={styles.menu}>
         <TouchableOpacity style={styles.menuItem}>
           <Text style={styles.menuItemText}>Editar Perfil</Text>
-          <ChevronRight size={20} color={Colors.gray[400]} />
+          <ChevronRight size={20} color={Colors.mutedForeground} />
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.menuItem}>
           <Text style={styles.menuItemText}>Definições</Text>
-          <ChevronRight size={20} color={Colors.gray[400]} />
+          <ChevronRight size={20} color={Colors.mutedForeground} />
         </TouchableOpacity>
 
         <TouchableOpacity 

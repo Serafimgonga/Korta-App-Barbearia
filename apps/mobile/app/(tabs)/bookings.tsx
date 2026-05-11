@@ -28,7 +28,7 @@ export default function BookingsScreen() {
       case 'confirmed': return { bg: '#E3F9E5', text: '#1F7A33' };
       case 'pending': return { bg: '#FFF4E5', text: '#B76E00' };
       case 'cancelled': return { bg: '#FFEBEB', text: '#CF222E' };
-      default: return { bg: Colors.surface, text: Colors.textSecondary };
+      default: return { bg: Colors.surface, text: Colors.mutedForeground };
     }
   };
 
@@ -51,15 +51,15 @@ export default function BookingsScreen() {
 
         <View style={styles.cardFooter}>
           <View style={styles.detailItem}>
-            <CalendarIcon size={14} color={Colors.textSecondary} />
+            <CalendarIcon size={14} color={Colors.mutedForeground} />
             <Text style={styles.detailText}>{item.date}</Text>
           </View>
           <View style={styles.detailItem}>
-            <Clock size={14} color={Colors.textSecondary} />
+            <Clock size={14} color={Colors.mutedForeground} />
             <Text style={styles.detailText}>{item.time_slot}</Text>
           </View>
           <View style={[styles.detailItem, { flex: 1 }]}>
-            <MapPin size={14} color={Colors.textSecondary} />
+            <MapPin size={14} color={Colors.mutedForeground} />
             <Text style={styles.detailText} numberOfLines={1}>{item.barbershop?.address}</Text>
           </View>
         </View>
@@ -80,7 +80,7 @@ export default function BookingsScreen() {
         ListEmptyComponent={
           !isLoading ? (
             <View style={styles.emptyContainer}>
-              <CalendarIcon size={64} color={Colors.gray[300]} />
+              <CalendarIcon size={64} color={Colors.surface2} />
               <Text style={styles.emptyTitle}>Sem marcações</Text>
               <Text style={styles.emptySubtitle}>As tuas futuras reservas aparecerão aqui.</Text>
             </View>
@@ -180,4 +180,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: Spacing.md,
     textAlign: 'center',
+  },
 });

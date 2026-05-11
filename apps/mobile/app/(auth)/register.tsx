@@ -61,18 +61,18 @@ export default function RegisterScreen() {
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <User size={20} color={Colors.textSecondary} style={styles.inputIcon} />
+            <User size={20} color={Colors.mutedForeground} style={styles.inputIcon} />
             <TextInput
               placeholder="Nome Completo"
               value={name}
               onChangeText={setName}
               style={styles.input}
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={Colors.mutedForeground}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Mail size={20} color={Colors.textSecondary} style={styles.inputIcon} />
+            <Mail size={20} color={Colors.mutedForeground} style={styles.inputIcon} />
             <TextInput
               placeholder="Email"
               value={email}
@@ -80,31 +80,31 @@ export default function RegisterScreen() {
               style={styles.input}
               autoCapitalize="none"
               keyboardType="email-address"
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={Colors.mutedForeground}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Phone size={20} color={Colors.textSecondary} style={styles.inputIcon} />
+            <Phone size={20} color={Colors.mutedForeground} style={styles.inputIcon} />
             <TextInput
               placeholder="Telefone (Opcional)"
               value={phone}
               onChangeText={setPhone}
               style={styles.input}
               keyboardType="phone-pad"
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={Colors.mutedForeground}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Lock size={20} color={Colors.textSecondary} style={styles.inputIcon} />
+            <Lock size={20} color={Colors.mutedForeground} style={styles.inputIcon} />
             <TextInput
               placeholder="Password"
               value={password}
               onChangeText={setPassword}
               style={styles.input}
               secureTextEntry
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={Colors.mutedForeground}
             />
           </View>
 
@@ -114,11 +114,11 @@ export default function RegisterScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.textOnPrimary} />
+              <ActivityIndicator color={Colors.primaryForeground} />
             ) : (
               <>
                 <Text style={styles.registerButtonText}>Criar Conta</Text>
-                <ArrowRight size={20} color={Colors.textOnPrimary} />
+                <ArrowRight size={20} color={Colors.primaryForeground} />
               </>
             )}
           </TouchableOpacity>

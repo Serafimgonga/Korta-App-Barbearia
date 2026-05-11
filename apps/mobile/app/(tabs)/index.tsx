@@ -63,13 +63,13 @@ export default function HomeScreen() {
       </View>
       
       <View style={styles.searchContainer}>
-        <Search size={20} color={Colors.textSecondary} />
+        <Search size={20} color={Colors.mutedForeground} />
         <TextInput
           placeholder="Procuras alguma barbearia?"
           value={search}
           onChangeText={setSearch}
           style={styles.searchInput}
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={Colors.mutedForeground}
         />
       </View>
 
