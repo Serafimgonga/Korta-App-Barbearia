@@ -12,23 +12,21 @@ import { useQuery } from '@tanstack/react-query';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store/auth';
 import { Calendar as CalendarIcon, Clock, Scissors, AlertCircle, MapPin } from 'lucide-react-native';
-import api from '../../src/api/client';
+import { BookingService } from '../../src/services/bookings';
 
 export default function BookingsScreen() {
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['my-bookings'],
-    queryFn: async () => {
-      const response = await api.get('/bookings/me');
-      return response.data;
-    },
+    queryFn: () => BookingService.myBookings(),
   });
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'confirmed': return { bg: '#E3F9E5', text: '#1F7A33' };
-      case 'pending': return { bg: '#FFF4E5', text: '#B76E00' };
-      case 'cancelled': return { bg: '#FFEBEB', text: '#CF222E' };
-      default: return { bg: Colors.surface, text: Colors.mutedForeground };
+      case 'confirmed':  return { bg: 'rgba(52, 211, 153, 0.2)', text: '#34D399' };
+      case 'pending':    return { bg: 'rgba(245, 158, 11, 0.2)', text: '#F59E0B' };
+      case 'cancelled':  return { bg: 'rgba(239, 68, 68, 0.2)',  text: '#EF4444' };
+      case 'completed':  return { bg: 'rgba(212, 175, 55, 0.2)', text: Colors.primary };
+      default:           return { bg: Colors.surface, text: Colors.mutedForeground };
     }
   };
 
