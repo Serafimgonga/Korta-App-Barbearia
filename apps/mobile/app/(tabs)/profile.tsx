@@ -87,6 +87,24 @@ export default function ProfileScreen() {
           <ChevronRight size={18} color={Colors.mutedForeground} />
         </TouchableOpacity>
 
+        {/* Painel do barbeiro */}
+        {user?.role === 'barber' && (
+          <TouchableOpacity
+            style={styles.barberPanel}
+            onPress={() => router.push('/(barber)/dashboard')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.barberPanelLeft}>
+              <Scissors size={20} color={Colors.primaryForeground} />
+              <View>
+                <Text style={styles.barberPanelTitle}>Painel do Barbeiro</Text>
+                <Text style={styles.barberPanelDesc}>Gerir barbearia, serviços e agendamentos</Text>
+              </View>
+            </View>
+            <ChevronRight size={18} color={Colors.primaryForeground} />
+          </TouchableOpacity>
+        )}
+
         {/* Botão de sair */}
         <TouchableOpacity
           style={styles.logoutButton}
@@ -194,6 +212,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.foreground,
     fontWeight: '600',
+  },
+  barberPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginTop: Spacing.lg,
+    ...Shadows.gold,
+  },
+  barberPanelLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  barberPanelTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.primaryForeground,
+  },
+  barberPanelDesc: {
+    fontSize: 11,
+    color: 'rgba(13,13,13,0.6)',
+    marginTop: 1,
   },
   logoutButton: {
     flexDirection: 'row',

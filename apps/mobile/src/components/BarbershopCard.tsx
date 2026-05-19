@@ -1,146 +1,287 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Animated } from 'react-native';
 import { Colors, Spacing, Radius, Shadows } from '../theme';
-import { Star, MapPin } from 'lucide-react-native';
+import { Star, MapPin, Clock, Scissors, Crown } from 'lucide-react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface BarbershopCardProps {
   name: string;
   address: string;
+  city?: string;
   rating: number;
   reviewsCount: number;
   imageUrl?: string;
   isPremium?: boolean;
+  status?: string;
+  openHours?: string;
+  index?: number;
   onPress?: () => void;
 }
 
 export const BarbershopCard = ({
-  name,
-  address,
-  rating,
-  reviewsCount,
-  imageUrl,
-  isPremium,
-  onPress,
+  name, address, city, rating, reviewsCount,
+  imageUrl, isPremium, status, openHours, index = 0, onPress,
 }: BarbershopCardProps) => {
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+  useEffect(() => {
+    const delay = index * 120;
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, delay, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, delay, useNativeDriver: true, damping: 18, stiffness: 100, mass: 1 }),
+      Animated.spring(scaleAnim, { toValue: 1, delay, useNativeDriver: true, damping: 20, stiffness: 120, mass: 1 }),
+    ]).start();
+  }, []);
+
+  const isOpen = status === 'open';
+  const ratingDisplay = rating > 0 ? rating.toFixed(1) : '—';
+
   return (
-    <TouchableOpacity 
-      style={styles.container} 
-      onPress={onPress}
-      activeOpacity={0.9}
-    >
-      <View style={styles.imageContainer}>
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }}>
+      <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.92}>
+        {/* Imagem com overlay */}
+        <View style={styles.imageContainer}>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
+          ) : (
+            <View style={[styles.image, styles.placeholder]}>
+              <Scissors size={48} color={Colors.primary} strokeWidth={1} />
+            </View>
+          )}
+
+          {/* Badge Premium */}
+          {isPremium && (
+            <View style={styles.premiumBadge}>
+              <Crown size={10} color={Colors.primaryForeground} />
+              <Text style={styles.premiumText}>PREMIUM</Text>
+            </View>
+          )}
+
+          {/* Rating flutuante */}
+          <View style={styles.ratingFloat}>
+            <Star size={12} color="#FFD700" fill="#FFD700" />
+            <Text style={styles.ratingFloatText}>{ratingDisplay}</Text>
+          </View>
+
+          {/* Status badge */}
+          <View style={[styles.statusBadge, { backgroundColor: isOpen ? Colors.success : Colors.error }]}>
+            <View style={styles.statusDot} />
+            <Text style={styles.statusText}>{isOpen ? 'Aberto' : 'Fechado'}</Text>
+          </View>
+
+          {/* Nome sobre a imagem */}
+          <View style={styles.imageInfo}>
+            <Text style={styles.nameOverImage} numberOfLines={1}>{name}</Text>
+            <View style={styles.locationRow}>
+              <MapPin size={11} color="rgba(255,255,255,0.7)" />
+              <Text style={styles.cityOverImage} numberOfLines={1}>{city || address}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Info card inferior */}
+        <View style={styles.info}>
+          <View style={styles.infoRow}>
+            <MapPin size={13} color={Colors.mutedForeground} />
+            <Text style={styles.infoText} numberOfLines={1}>{address}</Text>
+          </View>
+
+          <View style={styles.bottomRow}>
+            <View style={styles.statsRow}>
+              <Star size={12} color={Colors.primary} fill={Colors.primary} />
+              <Text style={styles.statText}>{ratingDisplay}</Text>
+              <View style={styles.statDivider} />
+              <Text style={styles.reviewCount}>{reviewsCount} avaliações</Text>
+            </View>
+            {openHours && (
+              <View style={styles.hoursRow}>
+                <Clock size={11} color={Colors.mutedForeground} />
+                <Text style={styles.hoursText} numberOfLines={1}>{openHours}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+// ── Card horizontal compacto para carrossel ──────────────────────────
+interface CompactCardProps {
+  name: string;
+  imageUrl?: string;
+  rating: number;
+  city?: string;
+  isPremium?: boolean;
+  index?: number;
+  onPress?: () => void;
+}
+
+export const CompactBarbershopCard = ({
+  name, imageUrl, rating, city, isPremium, index = 0, onPress,
+}: CompactCardProps) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideX = useRef(new Animated.Value(60)).current;
+
+  useEffect(() => {
+    const delay = index * 100;
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, delay, useNativeDriver: true }),
+      Animated.spring(slideX, { toValue: 0, delay, useNativeDriver: true, damping: 18, stiffness: 100, mass: 1 }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateX: slideX }] }}>
+      <TouchableOpacity style={styles.compactCard} onPress={onPress} activeOpacity={0.9}>
         {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.image} />
+          <Image source={{ uri: imageUrl }} style={styles.compactImage} resizeMode="cover" />
         ) : (
-          <View style={[styles.image, styles.placeholder]}>
-            <Star size={32} color={Colors.mutedForeground} />
+          <View style={[styles.compactImage, styles.placeholder]}>
+            <Scissors size={28} color={Colors.primary} strokeWidth={1} />
           </View>
         )}
+        <View style={styles.compactOverlay} />
         {isPremium && (
-          <View style={styles.premiumBadge}>
-            <Text style={styles.premiumText}>PREMIUM</Text>
+          <View style={styles.compactPremium}>
+            <Crown size={8} color={Colors.primaryForeground} />
           </View>
         )}
-      </View>
-
-      <View style={styles.info}>
-        <View style={styles.header}>
-          <Text style={styles.name} numberOfLines={1}>{name}</Text>
-          <View style={styles.rating}>
-            <Star size={14} color={Colors.primary} fill={Colors.primary} />
-            <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+        <View style={styles.compactInfo}>
+          <Text style={styles.compactName} numberOfLines={1}>{name}</Text>
+          <View style={styles.compactMeta}>
+            <Star size={10} color="#FFD700" fill="#FFD700" />
+            <Text style={styles.compactRating}>{rating > 0 ? rating.toFixed(1) : '—'}</Text>
+            {city && <Text style={styles.compactCity}>• {city}</Text>}
           </View>
         </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
-        <View style={styles.location}>
-          <MapPin size={14} color={Colors.mutedForeground} />
-          <Text style={styles.address} numberOfLines={1}>{address}</Text>
+// ── Card de corte em destaque ────────────────────────────────────────
+interface FeaturedCutProps {
+  imageUrl: string;
+  caption?: string;
+  shopName?: string;
+  index?: number;
+  onPress?: () => void;
+}
+
+export const FeaturedCutCard = ({
+  imageUrl, caption, shopName, index = 0, onPress,
+}: FeaturedCutProps) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    const delay = index * 80;
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, delay, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, delay, useNativeDriver: true, damping: 15, stiffness: 100, mass: 1 }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity style={styles.cutCard} onPress={onPress} activeOpacity={0.9}>
+        <Image source={{ uri: imageUrl }} style={styles.cutImage} resizeMode="cover" />
+        <View style={styles.cutOverlay} />
+        <View style={styles.cutInfo}>
+          {caption && <Text style={styles.cutCaption} numberOfLines={1}>{caption}</Text>}
+          {shopName && (
+            <View style={styles.cutShopRow}>
+              <Scissors size={9} color={Colors.primary} />
+              <Text style={styles.cutShopName} numberOfLines={1}>{shopName}</Text>
+            </View>
+          )}
         </View>
-
-        <Text style={styles.reviews}>{reviewsCount} avaliações</Text>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
+  // ── Card Principal ──
   container: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.elegant,
+    backgroundColor: Colors.surface, borderRadius: Radius.xl, overflow: 'hidden',
+    marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.border, ...Shadows.elegant,
   },
-  imageContainer: {
-    height: 180,
-    width: '100%',
-    position: 'relative',
-  },
-  image: {
-    height: '100%',
-    width: '100%',
-  },
-  placeholder: {
-    backgroundColor: Colors.surface2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  imageContainer: { height: 200, width: '100%', position: 'relative' },
+  image: { height: '100%', width: '100%' },
+  placeholder: { backgroundColor: Colors.surface2, justifyContent: 'center', alignItems: 'center' },
   premiumBadge: {
-    position: 'absolute',
-    top: Spacing.sm,
-    right: Spacing.sm,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Radius.sm,
+    position: 'absolute', top: Spacing.sm, left: Spacing.sm,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: Colors.primary, paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: Radius.full, ...Shadows.gold,
   },
-  premiumText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: Colors.primaryForeground,
+  premiumText: { fontSize: 9, fontWeight: '900', color: Colors.primaryForeground, letterSpacing: 1.5 },
+  ratingFloat: {
+    position: 'absolute', top: Spacing.sm, right: Spacing.sm,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: Radius.full,
   },
-  info: {
-    padding: Spacing.md,
+  ratingFloatText: { fontSize: 13, fontWeight: '900', color: '#FFD700' },
+  statusBadge: {
+    position: 'absolute', bottom: 56, right: Spacing.sm,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
+  statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#FFF' },
+  statusText: { fontSize: 10, fontWeight: '800', color: '#FFF', letterSpacing: 0.5 },
+  imageInfo: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    padding: Spacing.md, paddingTop: Spacing.xxl, backgroundColor: 'rgba(0,0,0,0.55)',
   },
-  name: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.foreground,
-    flex: 1,
-    marginRight: Spacing.sm,
+  nameOverImage: { fontSize: 22, fontWeight: '900', color: '#FAFAFA', letterSpacing: 0.5 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  cityOverImage: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
+
+  info: { padding: Spacing.md, gap: 8 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  infoText: { fontSize: 13, color: Colors.mutedForeground, flex: 1 },
+  bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statText: { fontSize: 14, fontWeight: '800', color: Colors.primary },
+  statDivider: { width: 1, height: 12, backgroundColor: Colors.border },
+  reviewCount: { fontSize: 12, color: Colors.mutedForeground, fontWeight: '500' },
+  hoursRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  hoursText: { fontSize: 11, color: Colors.mutedForeground },
+
+  // ── Compact Card ──
+  compactCard: {
+    width: 160, height: 200, borderRadius: Radius.lg, overflow: 'hidden',
+    marginRight: Spacing.sm, borderWidth: 1, borderColor: Colors.border, ...Shadows.elegant,
   },
-  rating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  compactImage: { width: '100%', height: '100%' },
+  compactOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
+  compactPremium: {
+    position: 'absolute', top: 8, left: 8,
+    backgroundColor: Colors.primary, width: 22, height: 22,
+    borderRadius: 11, justifyContent: 'center', alignItems: 'center',
   },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.primary,
+  compactInfo: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 10 },
+  compactName: { fontSize: 14, fontWeight: '800', color: '#FFF' },
+  compactMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  compactRating: { fontSize: 12, fontWeight: '700', color: '#FFD700' },
+  compactCity: { fontSize: 11, color: 'rgba(255,255,255,0.7)' },
+
+  // ── Featured Cut Card ──
+  cutCard: {
+    width: 130, height: 170, borderRadius: Radius.lg, overflow: 'hidden',
+    marginRight: Spacing.sm, borderWidth: 1, borderColor: Colors.border,
   },
-  location: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 8,
-  },
-  address: {
-    fontSize: 14,
-    color: Colors.mutedForeground,
-  },
-  reviews: {
-    fontSize: 12,
-    color: Colors.mutedForeground,
-    fontWeight: '500',
-    letterSpacing: 0.5,
-  },
+  cutImage: { width: '100%', height: '100%' },
+  cutOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.25)' },
+  cutInfo: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 8 },
+  cutCaption: { fontSize: 12, fontWeight: '700', color: '#FFF' },
+  cutShopRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  cutShopName: { fontSize: 10, color: Colors.primary, fontWeight: '600' },
 });

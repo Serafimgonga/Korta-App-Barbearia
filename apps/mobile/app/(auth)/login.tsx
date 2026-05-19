@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { AuthService } from '../../src/services/auth';
+import { useAuthStore } from '../../src/store/auth';
 import { Mail, Lock, ArrowRight } from 'lucide-react-native';
 
 export default function LoginScreen() {
@@ -22,16 +23,31 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    console.log(`🔑 [KORTA] Tentativa de login iniciada para o email: ${email}`);
     if (!email || !password) {
+      console.warn('⚠️ [KORTA] Login abortado: campos obrigatórios em falta.');
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
       return;
     }
 
     setLoading(true);
     try {
+      console.log('📡 [KORTA] A chamar AuthService.login...');
       await AuthService.login(email, password);
-      router.replace('/(tabs)'); // Futura aba principal
+      const user = useAuthStore.getState().user;
+      console.log('✅ [KORTA] Login bem-sucedido! Role:', user?.role);
+      if (user?.role === 'barber') {
+        router.replace('/(barber)/dashboard');
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (error: any) {
+      console.error('❌ [KORTA] Erro ao fazer login:', {
+        message: error.message,
+        url: error.config?.url,
+        responseStatus: error.response?.status,
+        responseData: error.response?.data
+      });
       Alert.alert('Falha no Login', error.response?.data?.detail || 'Ocorreu um erro inesperado.');
     } finally {
       setLoading(false);

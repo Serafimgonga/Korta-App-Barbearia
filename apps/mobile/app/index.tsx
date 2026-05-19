@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  console.log("📱 [KORTA] Ecrã de Boas-Vindas carregado com sucesso!");
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />

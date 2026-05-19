@@ -24,7 +24,9 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" />
-        {/* Futuras rotas aqui */}
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(barber)" />
       </Stack>
     </QueryClientProvider>
   );
