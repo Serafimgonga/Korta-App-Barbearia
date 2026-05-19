@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-KORTA API — Script de arranque com tunnel ngrok
+KORTA API — Script de arranque com localtunnel (sem autenticação)
 Inicia o FastAPI e expõe a API publicamente para o Expo Go.
 
 Uso:
@@ -9,78 +9,89 @@ Uso:
 """
 
 import subprocess
+import threading
 import time
 import sys
-import os
+import re
+
+
+def start_localtunnel(port: int = 8000):
+    """Inicia o localtunnel via npx (sem instalar nada globalmente)."""
+    print("🌐 A abrir túnel localtunnel...")
+    try:
+        proc = subprocess.Popen(
+            ["npx", "--yes", "localtunnel", "--port", str(port)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        # Aguardar a URL ser impressa no stdout
+        for line in proc.stdout:
+            line = line.strip()
+            if "https://" in line:
+                url = re.search(r'https://[\w.-]+\.loca\.lt', line)
+                if url:
+                    return url.group(0), proc
+
+        return None, proc
+    except FileNotFoundError:
+        print("❌ npx não encontrado. Instala o Node.js.")
+        return None, None
+
+
+def start_uvicorn():
+    """Inicia o servidor FastAPI."""
+    print("🔥 A iniciar FastAPI na porta 8000...")
+    return subprocess.Popen(
+        ["./venv/bin/python", "-m", "uvicorn", "app.main:app",
+         "--host", "0.0.0.0", "--port", "8000", "--reload"],
+    )
+
+
+def print_instructions(url: str):
+    """Imprime as instruções para o utilizador."""
+    print("\n" + "=" * 57)
+    print("  🚀 TUNNEL ATIVO — KORTA API acessível publicamente!")
+    print("=" * 57)
+    print(f"\n  🌐 URL Pública: {url}")
+    print(f"\n  📱 Passo a passo:")
+    print(f"     1. Abre o ficheiro:")
+    print(f"        apps/mobile/src/api/client.ts")
+    print(f"     2. Altera a linha 18 para:")
+    print(f"        const NGROK_URL = '{url}';")
+    print(f"     3. Guarda — o Expo recarrega automaticamente ✅")
+    print("\n" + "=" * 57)
+    print("  Pressiona Ctrl+C para parar")
+    print("=" * 57 + "\n")
+
 
 def main():
-    print("=" * 55)
+    print("=" * 57)
     print("  💈 KORTA API — Tunnel para Expo Go")
-    print("=" * 55)
+    print("=" * 57)
 
-    # Verificar se o token do ngrok está configurado
-    try:
-        from pyngrok import ngrok, conf
-        print("\n✅ pyngrok instalado")
-    except ImportError:
-        print("❌ pyngrok não instalado. Executa: ./venv/bin/pip install pyngrok")
-        sys.exit(1)
+    # 1. Iniciar o uvicorn em background
+    uvicorn_proc = start_uvicorn()
+    time.sleep(2)  # Dar tempo ao uvicorn para arrancar
 
-    # Configurar token do ngrok (gratuito, regista em ngrok.com)
-    ngrok_token = os.getenv("NGROK_AUTHTOKEN", "")
-    if ngrok_token:
-        ngrok.set_auth_token(ngrok_token)
-        print("✅ Token ngrok configurado")
+    # 2. Iniciar o localtunnel
+    url, tunnel_proc = start_localtunnel(8000)
+
+    if url:
+        print_instructions(url)
     else:
-        print("⚠️  Sem token ngrok — a usar modo anónimo (tempo limitado)")
-        print("   Regista-te em https://ngrok.com e adiciona ao .env:")
-        print("   NGROK_AUTHTOKEN=o_teu_token\n")
+        print("⚠️  Não foi possível obter a URL do localtunnel.")
+        print("    Verifica se tens internet e o Node.js instalado.")
 
-    # Iniciar túnel ngrok na porta 8000 (FastAPI)
-    print("🌐 A abrir túnel ngrok...")
+    # 3. Aguardar Ctrl+C
     try:
-        tunnel = ngrok.connect(8000, "http")
-        public_url = tunnel.public_url
-
-        # Forçar HTTPS
-        if public_url.startswith("http://"):
-            public_url = public_url.replace("http://", "https://", 1)
-
-        print("\n" + "=" * 55)
-        print("  🚀 TUNNEL ATIVO!")
-        print("=" * 55)
-        print(f"\n  URL Pública: {public_url}")
-        print(f"\n  📱 No ficheiro:")
-        print(f"     apps/mobile/src/api/client.ts")
-        print(f"\n  Substitui a linha:")
-        print(f"     const NGROK_URL = '';")
-        print(f"\n  Por:")
-        print(f"     const NGROK_URL = '{public_url}';")
-        print("\n" + "=" * 55)
-        print("  Pressiona Ctrl+C para parar o servidor")
-        print("=" * 55 + "\n")
-
-    except Exception as e:
-        print(f"❌ Erro ao abrir túnel: {e}")
-        print("   Tenta registar-te em ngrok.com e configurar o NGROK_AUTHTOKEN")
-        public_url = None
-
-    # Iniciar FastAPI (uvicorn)
-    print("🔥 A iniciar FastAPI...")
-    uvicorn_cmd = [
-        "./venv/bin/python", "-m", "uvicorn",
-        "app.main:app",
-        "--host", "0.0.0.0",
-        "--port", "8000",
-        "--reload"
-    ]
-
-    try:
-        proc = subprocess.run(uvicorn_cmd)
+        uvicorn_proc.wait()
     except KeyboardInterrupt:
-        print("\n\n⏹️  Servidor parado. A fechar túnel ngrok...")
-        if public_url:
-            ngrok.kill()
+        print("\n\n⏹️  A encerrar...")
+        uvicorn_proc.terminate()
+        if tunnel_proc:
+            tunnel_proc.terminate()
         print("✅ Encerrado com sucesso!")
 
 
