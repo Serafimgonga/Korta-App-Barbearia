@@ -1,6 +1,6 @@
 # ✂️ KORTA
 
-A **KORTA** é uma aplicação mobile premium de descoberta e marcação de barbearias, focada inicialmente na província de Ícolo e Bengo, Angola. 
+A **KORTA** é uma aplicação mobile de descoberta e marcação de barbearias, focada inicialmente na província de Ícolo e Bengo, Angola. 
 
 A plataforma liga clientes que procuram cortes de qualidade a barbeiros profissionais, oferecendo uma experiência fluida de agendamento e um painel de gestão completo (PRO) para os donos das barbearias.
 
