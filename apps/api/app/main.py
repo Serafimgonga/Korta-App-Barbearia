@@ -28,15 +28,31 @@ Obtém o token via `/api/v1/auth/login`.
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Em desenvolvimento (DEBUG=True), permitimos qualquer origem para facilitar testes com Expo Go e túneis
+if settings.DEBUG:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,  # FastAPI exige False quando allow_origins=["*"]
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+from fastapi.staticfiles import StaticFiles
+import os
+
+os.makedirs("media/photos", exist_ok=True)
+app.mount("/media", StaticFiles(directory="media"), name="media")
+
 app.include_router(api_router, prefix="/api/v1")
 
 

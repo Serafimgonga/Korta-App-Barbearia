@@ -87,6 +87,7 @@ class Barbershop(Base):
     bookings = relationship("Booking", back_populates="barbershop")
     reviews = relationship("Review", back_populates="barbershop")
     photos = relationship("Photo", back_populates="barbershop", cascade="all, delete-orphan")
+    service_photos = relationship("ServicePhoto", back_populates="shop", cascade="all, delete-orphan")
 
 
 class Service(Base):
@@ -104,6 +105,32 @@ class Service(Base):
     # relationships
     barbershop = relationship("Barbershop", back_populates="services")
     bookings = relationship("Booking", back_populates="service")
+    photos = relationship(
+        "ServicePhoto",
+        back_populates="service",
+        order_by="ServicePhoto.display_order",
+        cascade="all, delete-orphan"
+    )
+
+
+class ServicePhoto(Base):
+    __tablename__ = "service_photos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    service_id = Column(Integer, ForeignKey("services.id", ondelete="CASCADE"), nullable=False)
+    shop_id = Column(Integer, ForeignKey("barbershops.id", ondelete="CASCADE"), nullable=False)
+    uploaded_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    url = Column(String(500), nullable=False)          # URL no Cloudinary ou local
+    caption = Column(String(200), nullable=True)       # legenda opcional
+    display_order = Column(Integer, default=0, nullable=False) # ordem de exibição
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # relationships
+    service = relationship("Service", back_populates="photos")
+    shop = relationship("Barbershop", back_populates="service_photos")
+    uploader = relationship("User")
 
 
 class Booking(Base):

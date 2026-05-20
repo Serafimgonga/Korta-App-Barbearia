@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { Colors, Spacing, Radius } from '../../src/theme';
 import { BarbershopService } from '../../src/services/barbershops';
-import api from '../../src/api/client';
+import { BookingService, BookingStatusPayload } from '../../src/services/bookings';
+import { useBarberStore } from '../../src/store/barber';
+import ShopSelectorHeader from '../../src/components/ShopSelectorHeader';
 import { Calendar, Clock, User, CheckCircle, XCircle, Scissors } from 'lucide-react-native';
 
 type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
@@ -19,33 +21,19 @@ const STATUS_CONFIG: Record<BookingStatus, { label: string; color: string; bg: s
 };
 
 export default function MyBookingsScreen() {
-  const [shops, setShops]           = useState<any[]>([]);
-  const [selectedShop, setSelected] = useState<any>(null);
+  const { shops, activeShop, loadShops, loading } = useBarberStore();
   const [bookings, setBookings]     = useState<any[]>([]);
-  const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter]         = useState<BookingStatus | 'all'>('all');
 
   useEffect(() => { loadShops(); }, []);
-  useEffect(() => { if (selectedShop) loadBookings(); }, [selectedShop]);
-
-  const loadShops = async () => {
-    try {
-      const data = await BarbershopService.getMyBarbershops();
-      const list = Array.isArray(data) ? data : [];
-      setShops(list);
-      if (list.length > 0) setSelected(list[0]);
-    } catch { } finally { setLoading(false); }
-  };
+  useEffect(() => { if (activeShop) loadBookings(); }, [activeShop]);
 
   const loadBookings = async () => {
-    if (!selectedShop) return;
+    if (!activeShop) return;
     try {
-      const response = await api.get('/bookings', {
-        params: { barbershop_id: selectedShop.id, per_page: 50 }
-      });
-      const data = response.data;
-      setBookings(Array.isArray(data) ? data : (data?.items || []));
+      const data = await BookingService.getActiveShopBookings();
+      setBookings(Array.isArray(data) ? data : []);
     } catch { setBookings([]); }
   };
 
@@ -57,7 +45,8 @@ export default function MyBookingsScreen() {
 
   const updateStatus = async (bookingId: number, newStatus: BookingStatus) => {
     try {
-      await api.put(`/bookings/${bookingId}`, { status: newStatus });
+      // Backend schema expects BookingStatus: pending, confirmed, cancelled, completed, no_show
+      await BookingService.updateStatus(bookingId, { status: newStatus as any });
       await loadBookings();
     } catch (e: any) {
       Alert.alert('Erro', e.response?.data?.detail || 'Não foi possível actualizar o estado.');
@@ -93,21 +82,7 @@ export default function MyBookingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Seletor de loja */}
-      {shops.length > 1 && (
-        <View style={styles.shopSelector}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {shops.map((s) => (
-              <TouchableOpacity
-                key={s.id}
-                style={[styles.shopTab, selectedShop?.id === s.id && styles.shopTabActive]}
-                onPress={() => setSelected(s)}
-              >
-                <Text style={[styles.shopTabText, selectedShop?.id === s.id && styles.shopTabTextActive]}>{s.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
+      <ShopSelectorHeader />
 
       {/* Resumo + Filtros */}
       <View style={styles.summary}>

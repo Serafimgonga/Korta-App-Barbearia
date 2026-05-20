@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store/auth';
+import { useBarberStore } from '../../src/store/barber';
 import { useRouter } from 'expo-router';
 import {
   User as UserIcon,
@@ -19,6 +20,7 @@ export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
 
   const handleLogout = async () => {
+    useBarberStore.getState().reset();
     await logout();
     router.replace('/');
   };

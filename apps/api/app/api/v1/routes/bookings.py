@@ -3,10 +3,20 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas import BookingCreate, BookingStatusUpdate, BookingResponse
 from app.services import BookingService
-from app.utils.dependencies import get_current_user
-from app.models import User
+from app.utils.dependencies import get_current_user, get_active_shop
+from app.models import User, Barbershop
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
+
+
+@router.get("", response_model=list[BookingResponse])
+def list_bookings(
+    db: Session = Depends(get_db),
+    active_shop: Barbershop = Depends(get_active_shop),
+):
+    """Marcações da barbearia activa."""
+    return BookingService.barbershop_bookings(db, active_shop.id, active_shop.owner_id)
+
 
 
 @router.post("", response_model=BookingResponse, status_code=201)

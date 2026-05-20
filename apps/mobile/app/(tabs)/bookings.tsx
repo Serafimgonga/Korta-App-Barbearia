@@ -38,7 +38,7 @@ export default function BookingsScreen() {
         <View style={styles.cardHeader}>
           <View style={styles.shopInfo}>
             <Text style={styles.shopName}>{item.barbershop?.name}</Text>
-            <View style={styles.statusBadge} style={{ backgroundColor: status.bg }}>
+            <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
               <Text style={[styles.statusText, { color: status.text }]}>
                 {item.status.toUpperCase()}
               </Text>
@@ -173,10 +173,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.xxl,
   },
-  emptyText: {
-    color: Colors.mutedForeground,
-    fontSize: 16,
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.foreground,
     marginTop: Spacing.md,
     textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: Colors.mutedForeground,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(13, 13, 13, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
   },
 });

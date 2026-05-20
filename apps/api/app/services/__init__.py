@@ -5,14 +5,14 @@ from typing import Optional
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.repositories import (
     UserRepository, BarbershopRepository, ServiceRepository,
-    BookingRepository, ReviewRepository, PhotoRepository
+    BookingRepository, ReviewRepository, PhotoRepository, ServicePhotoRepository
 )
 from app.schemas import (
     UserRegister, UserLogin, TokenResponse, UserUpdate,
     BarbershopCreate, BarbershopUpdate,
     ServiceCreate, ServiceUpdate,
     BookingCreate, BookingStatusUpdate,
-    ReviewCreate,
+    ReviewCreate, ServicePhotoCreate, ServicePhotoUpdate,
 )
 from app.models import UserRole, BookingStatus
 
@@ -160,13 +160,21 @@ class ServiceService:
         return ServiceRepository.get_by_barbershop(db, barbershop_id)
 
     @staticmethod
+    def get_details(db: Session, service_id: int):
+        service = ServiceRepository.get_by_id(db, service_id)
+        if not service:
+            raise HTTPException(status_code=404, detail="Serviço não encontrado")
+        return service
+
+    @staticmethod
     def create(db: Session, barbershop_id: int, data: ServiceCreate, current_user_id: int):
         shop = BarbershopRepository.get_by_id(db, barbershop_id)
         if not shop:
             raise HTTPException(status_code=404, detail="Barbearia não encontrada")
         if shop.owner_id != current_user_id:
             raise HTTPException(status_code=403, detail="Sem permissão")
-        return ServiceRepository.create(db, barbershop_id=barbershop_id, **data.model_dump())
+        service_data = data.model_dump(exclude={"barbershop_id"})
+        return ServiceRepository.create(db, barbershop_id=barbershop_id, **service_data)
 
     @staticmethod
     def update(db: Session, service_id: int, data: ServiceUpdate, current_user_id: int):
@@ -287,3 +295,59 @@ class ReviewService:
             "per_page": per_page,
             "pages": -(-total // per_page),
         }
+
+
+# ── SERVICE PHOTO SERVICE ─────────────────────────────────────────────────────
+
+class ServicePhotoService:
+
+    @staticmethod
+    def list_by_service(db: Session, service_id: int):
+        service = ServiceRepository.get_by_id(db, service_id)
+        if not service:
+            raise HTTPException(status_code=404, detail="Serviço não encontrado")
+        return ServicePhotoRepository.get_by_service(db, service_id)
+
+    @staticmethod
+    def create(db: Session, service_id: int, data: ServicePhotoCreate, current_user_id: int):
+        service = ServiceRepository.get_by_id(db, service_id)
+        if not service:
+            raise HTTPException(status_code=404, detail="Serviço não encontrado")
+        
+        shop = BarbershopRepository.get_by_id(db, service.barbershop_id)
+        if not shop or shop.owner_id != current_user_id:
+            raise HTTPException(status_code=403, detail="Sem permissão para adicionar fotos a este serviço")
+
+        return ServicePhotoRepository.create(
+            db,
+            service_id=service_id,
+            shop_id=shop.id,
+            url=data.url,
+            caption=data.caption,
+            display_order=data.display_order,
+            uploaded_by=current_user_id
+        )
+
+    @staticmethod
+    def update(db: Session, photo_id: int, data: ServicePhotoUpdate, current_user_id: int):
+        photo = ServicePhotoRepository.get_by_id(db, photo_id)
+        if not photo:
+            raise HTTPException(status_code=404, detail="Foto de serviço não encontrada")
+        
+        shop = BarbershopRepository.get_by_id(db, photo.shop_id)
+        if not shop or shop.owner_id != current_user_id:
+            raise HTTPException(status_code=403, detail="Sem permissão para editar esta foto")
+
+        return ServicePhotoRepository.update(db, photo, **data.model_dump(exclude_none=True))
+
+    @staticmethod
+    def delete(db: Session, photo_id: int, current_user_id: int):
+        photo = ServicePhotoRepository.get_by_id(db, photo_id)
+        if not photo:
+            raise HTTPException(status_code=404, detail="Foto de serviço não encontrada")
+        
+        shop = BarbershopRepository.get_by_id(db, photo.shop_id)
+        if not shop or shop.owner_id != current_user_id:
+            raise HTTPException(status_code=403, detail="Sem permissão para eliminar esta foto")
+
+        ServicePhotoRepository.delete(db, photo)

@@ -20,11 +20,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(pwd_bytes, hashed_bytes)
 
 
-def create_access_token(subject: Any) -> str:
+def create_access_token(subject: Any, active_shop_id: int | None = None) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     payload = {"sub": str(subject), "exp": expire, "type": "access"}
+    if active_shop_id is not None:
+        payload["active_shop_id"] = active_shop_id
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 

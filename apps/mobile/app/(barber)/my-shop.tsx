@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { BarbershopService } from '../../src/services/barbershops';
+import { useBarberStore } from '../../src/store/barber';
+import ShopSelectorHeader from '../../src/components/ShopSelectorHeader';
 import {
   Store, MapPin, Phone, Clock, Save, Plus,
   CheckCircle, XCircle, PauseCircle
@@ -19,11 +21,9 @@ const STATUS_OPTIONS: { value: Status; label: string; icon: any; color: string }
 ];
 
 export default function MyShopScreen() {
-  const [shops, setShops]         = useState<any[]>([]);
-  const [selected, setSelected]   = useState<any | null>(null);
-  const [loading, setLoading]     = useState(true);
-  const [saving, setSaving]       = useState(false);
+  const { shops, activeShop, loadShops, refreshShops, loading } = useBarberStore();
   const [creating, setCreating]   = useState(false);
+  const [saving, setSaving]       = useState(false);
 
   // Form state
   const [name, setName]           = useState('');
@@ -36,34 +36,27 @@ export default function MyShopScreen() {
   const [openHours, setOpenHours] = useState('Seg-Sáb: 08:00 - 20:00');
   const [status, setStatus]       = useState<Status>('open');
 
-  useEffect(() => { loadShops(); }, []);
+  useEffect(() => {
+    loadShops();
+  }, []);
 
-  const loadShops = async () => {
-    try {
-      const data = await BarbershopService.getMyBarbershops();
-      const list = Array.isArray(data) ? data : [];
-      setShops(list);
-      if (list.length > 0 && !creating) selectShop(list[0]);
-    } catch { setShops([]); }
-    finally { setLoading(false); }
-  };
-
-  const selectShop = (shop: any) => {
-    setSelected(shop);
-    setCreating(false);
-    setName(shop.name || '');
-    setDesc(shop.description || '');
-    setAddress(shop.address || '');
-    setCity(shop.city || '');
-    setProvince(shop.province || 'Luanda');
-    setPhone(shop.phone || '');
-    setWhatsapp(shop.whatsapp || '');
-    setOpenHours(shop.open_hours || '');
-    setStatus(shop.status || 'open');
-  };
+  // Update form fields when activeShop changes
+  useEffect(() => {
+    if (activeShop && !creating) {
+      setName(activeShop.name || '');
+      setDesc(activeShop.description || '');
+      setAddress(activeShop.address || '');
+      setCity(activeShop.city || '');
+      setProvince(activeShop.province || 'Luanda');
+      setPhone(activeShop.phone || '');
+      setWhatsapp(activeShop.whatsapp || '');
+      setOpenHours(activeShop.open_hours || '');
+      setStatus(activeShop.status as Status || 'open');
+    }
+  }, [activeShop, creating]);
 
   const startCreating = () => {
-    setSelected(null); setCreating(true);
+    setCreating(true);
     setName(''); setDesc(''); setAddress(''); setCity('');
     setProvince('Luanda'); setPhone(''); setWhatsapp('');
     setOpenHours('Seg-Sáb: 08:00 - 20:00'); setStatus('open');
@@ -77,16 +70,19 @@ export default function MyShopScreen() {
     setSaving(true);
     try {
       const payload = { name, description, address, city, province, phone, whatsapp, open_hours: openHours, status };
-      if (creating) {
-        await BarbershopService.create(payload);
+      if (creating || !activeShop) {
+        const newShop = await BarbershopService.create(payload);
         Alert.alert('✅ Criada!', 'A tua barbearia foi criada com sucesso.');
         setCreating(false);
+        // Auto-select the newly created shop
+        await useBarberStore.getState().setActiveShop(newShop);
       } else {
-        await BarbershopService.update(selected.id, payload);
+        await BarbershopService.update(activeShop.id, payload);
         Alert.alert('✅ Guardado!', 'As alterações foram guardadas.');
       }
-      await loadShops();
+      await refreshShops();
     } catch (e: any) {
+      console.error(e);
       Alert.alert('Erro', e.response?.data?.detail || 'Erro ao guardar.');
     } finally { setSaving(false); }
   };
@@ -104,30 +100,11 @@ export default function MyShopScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* Seletor de barbearia */}
-        {shops.length > 0 && (
-          <View style={styles.shopSelector}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {shops.map((s) => (
-                <TouchableOpacity
-                  key={s.id}
-                  style={[styles.shopTab, selected?.id === s.id && styles.shopTabActive]}
-                  onPress={() => selectShop(s)}
-                >
-                  <Text style={[styles.shopTabText, selected?.id === s.id && styles.shopTabTextActive]}>
-                    {s.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity
-                style={[styles.shopTab, creating && styles.shopTabActive]}
-                onPress={startCreating}
-              >
-                <Plus size={14} color={creating ? Colors.primaryForeground : Colors.primary} />
-                <Text style={[styles.shopTabText, creating && styles.shopTabTextActive]}>Nova</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        )}
+        <ShopSelectorHeader
+          showCreateOption
+          onCreatePress={startCreating}
+          isCreating={creating}
+        />
 
         {/* Formulário */}
         <View style={styles.form}>
@@ -218,7 +195,7 @@ export default function MyShopScreen() {
           </View>
 
           {/* Status */}
-          {selected && (
+          {!creating && activeShop && (
             <>
               <Text style={[styles.sectionLabel, { marginTop: Spacing.md }]}>ESTADO</Text>
               <View style={styles.statusRow}>
@@ -244,7 +221,7 @@ export default function MyShopScreen() {
               <>
                 <Save size={18} color={Colors.primaryForeground} />
                 <Text style={styles.saveBtnText}>
-                  {creating ? 'Criar Barbearia' : 'Guardar Alterações'}
+                  {creating || !activeShop ? 'Criar Barbearia' : 'Guardar Alterações'}
                 </Text>
               </>
             )}

@@ -128,12 +128,9 @@ export default function BarbershopDetails() {
                 duration={service.duration_minutes}
                 onPress={() => {
                   router.push({
-                    pathname: '/booking/create',
+                    pathname: `/service/${service.id}` as any,
                     params: {
-                      barbershopId: shop.id,
-                      serviceId: service.id,
-                      serviceName: service.name,
-                      price: service.price
+                      shopName: shop.name
                     }
                   });
                 }}

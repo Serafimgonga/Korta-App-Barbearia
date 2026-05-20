@@ -6,7 +6,7 @@ Uso:  cd apps/api && ./venv/bin/python seed_rich.py
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal, engine
 from app.models import (
-    Base, User, Barbershop, Service, Booking, Review, Photo,
+    Base, User, Barbershop, Service, ServicePhoto, Booking, Review, Photo,
     UserRole, BarberStatus, BookingStatus, PhotoType
 )
 from app.core.security import hash_password
@@ -304,11 +304,27 @@ def create_services(db: Session, shops: list):
         if existing:
             continue
         template = SERVICES_PREMIUM if shop.is_premium else SERVICES_STANDARD
-        for svc_data in template:
+        for idx, svc_data in enumerate(template):
             svc = Service(barbershop_id=shop.id, is_active=True, **svc_data)
             db.add(svc)
+            db.flush()  # Obter o id do serviço criado
+
+            # Adicionar fotos reais de demonstração ao serviço (especialmente para Corte/Fade/Barba)
+            if any(term in svc.name.lower() for term in ["corte", "fade", "barba"]):
+                # Adiciona 3 fotos de demonstração de trabalhos realizados
+                num_photos = 3
+                for i in range(num_photos):
+                    photo_idx = (idx * 3 + i) % len(HAIRCUT_PHOTOS)
+                    db.add(ServicePhoto(
+                        service_id=svc.id,
+                        shop_id=shop.id,
+                        url=HAIRCUT_PHOTOS[photo_idx],
+                        caption=f"Demonstração de {svc.name} - {shop.name}",
+                        display_order=i,
+                        uploaded_by=shop.owner_id
+                    ))
         db.commit()
-        print(f"   ✅ {len(template)} serviços → {shop.name}")
+        print(f"   ✅ {len(template)} serviços (com fotos reais integradas) → {shop.name}")
 
 
 def create_photos(db: Session, shops: list):

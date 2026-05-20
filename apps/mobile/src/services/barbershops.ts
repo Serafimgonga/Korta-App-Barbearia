@@ -30,6 +30,11 @@ export const BarbershopService = {
     return response.data;
   },
 
+  switchActiveShop: async (shopId: number) => {
+    const response = await api.post('/barbershops/switch', { shop_id: shopId });
+    return response.data;
+  },
+
   create: async (data: {
     name: string;
     description: string;
@@ -61,6 +66,21 @@ export const BarbershopService = {
   },
 
   // ── Serviços (CRUD) ──────────────────────────────────────────
+  getActiveServices: async () => {
+    const response = await api.get('/barbershops/active/services');
+    return response.data;
+  },
+
+  createActiveService: async (data: {
+    name: string;
+    description: string;
+    price: number;
+    duration_minutes: number;
+  }) => {
+    const response = await api.post('/barbershops/active/services', data);
+    return response.data;
+  },
+
   createService: async (barbershopId: number, data: {
     name: string;
     description: string;

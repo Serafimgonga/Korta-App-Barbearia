@@ -15,7 +15,7 @@ import { useAuthStore } from '../store/auth';
  * Para emulador iOS (simulator): http://localhost:8000/api/v1
  * ─────────────────────────────────────────────────────
  */
-const NGROK_URL = 'https://spicy-frogs-cross.loca.lt'; // ← Cola aqui a URL do ngrok quando disponível
+const NGROK_URL = 'https://e680-105-174-52-229.ngrok-free.app'; // ← Cola aqui a URL do ngrok quando disponível
 
 const getBaseURL = () => {
   // Se tiver URL do ngrok configurada, usar sempre (dispositivo físico)
@@ -30,6 +30,7 @@ const api = axios.create({
   timeout: 10000, // 10 segundos de timeout
   headers: {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true', // Ignora a página de aviso do ngrok no browser
   },
 });
 

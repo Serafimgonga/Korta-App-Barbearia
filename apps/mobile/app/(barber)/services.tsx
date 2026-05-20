@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, SafeAreaView, Modal
+  TextInput, ActivityIndicator, Alert, SafeAreaView, Modal,
+  Image
 } from 'react-native';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { BarbershopService } from '../../src/services/barbershops';
-import { Plus, Scissors, Edit2, Trash2, Clock, DollarSign, X, Save, ToggleLeft, ToggleRight } from 'lucide-react-native';
+import { ServicesService } from '../../src/services/services';
+import { useBarberStore } from '../../src/store/barber';
+import ShopSelectorHeader from '../../src/components/ShopSelectorHeader';
+import * as ImagePicker from 'expo-image-picker';
+import { Plus, Scissors, Edit2, Trash2, Clock, DollarSign, X, Save, ToggleLeft, ToggleRight, Camera, Trash } from 'lucide-react-native';
 
 export default function ServicesScreen() {
-  const [shops, setShops]         = useState<any[]>([]);
-  const [selectedShop, setSelected] = useState<any>(null);
+  const { shops, activeShop, loadShops, loading } = useBarberStore();
   const [services, setServices]   = useState<any[]>([]);
-  const [loading, setLoading]     = useState(true);
   const [modalVisible, setModal]  = useState(false);
   const [editing, setEditing]     = useState<any>(null);
   const [saving, setSaving]       = useState(false);
@@ -22,28 +25,97 @@ export default function ServicesScreen() {
   const [svcPrice, setSvcPrice]     = useState('');
   const [svcDuration, setSvcDuration] = useState('30');
 
+  // Photo tab states
+  const [modalTab, setModalTab]           = useState<'details' | 'photos'>('details');
+  const [photos, setPhotos]               = useState<any[]>([]);
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
   useEffect(() => { loadShops(); }, []);
-  useEffect(() => { if (selectedShop) loadServices(selectedShop.id); }, [selectedShop]);
+  useEffect(() => { if (activeShop) loadServices(); }, [activeShop]);
 
-  const loadShops = async () => {
+  const loadServices = async () => {
     try {
-      const data = await BarbershopService.getMyBarbershops();
-      const list = Array.isArray(data) ? data : [];
-      setShops(list);
-      if (list.length > 0) setSelected(list[0]);
-    } catch { } finally { setLoading(false); }
-  };
-
-  const loadServices = async (shopId: number) => {
-    try {
-      const data = await BarbershopService.getServices(shopId);
+      const data = await BarbershopService.getActiveServices();
       setServices(Array.isArray(data) ? data : []);
     } catch { setServices([]); }
+  };
+
+  const loadPhotos = async (serviceId: number) => {
+    setLoadingPhotos(true);
+    try {
+      const details = await ServicesService.getDetails(serviceId);
+      setPhotos(details.photos || []);
+    } catch {
+      setPhotos([]);
+    } finally {
+      setLoadingPhotos(false);
+    }
+  };
+
+  const handlePickAndUploadPhoto = async () => {
+    if (!editing) return;
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permissão necessária', 'Precisamos de permissão para aceder à galeria para carregar fotos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      const fileUri = asset.uri;
+      const fileName = fileUri.split('/').pop() || `photo_${Date.now()}.jpg`;
+      const mimeType = asset.mimeType || 'image/jpeg';
+
+      setUploadingPhoto(true);
+      await ServicesService.uploadPhotoFile(editing.id, fileUri, mimeType, fileName);
+      Alert.alert('Sucesso', 'Foto adicionada com sucesso!');
+      await loadPhotos(editing.id);
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert('Erro', e.response?.data?.detail || 'Erro ao carregar imagem.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleDeletePhoto = (photoId: number) => {
+    if (!editing) return;
+    Alert.alert(
+      'Eliminar Foto',
+      'Tens a certeza que queres eliminar esta foto?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar', style: 'destructive',
+          onPress: async () => {
+            try {
+              await ServicesService.deletePhoto(editing.id, photoId);
+              await loadPhotos(editing.id);
+            } catch {
+              Alert.alert('Erro', 'Não foi possível eliminar a foto.');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const openCreate = () => {
     setEditing(null);
     setSvcName(''); setSvcDesc(''); setSvcPrice(''); setSvcDuration('30');
+    setPhotos([]);
+    setModalTab('details');
     setModal(true);
   };
 
@@ -51,6 +123,9 @@ export default function ServicesScreen() {
     setEditing(svc);
     setSvcName(svc.name); setSvcDesc(svc.description || '');
     setSvcPrice(String(svc.price)); setSvcDuration(String(svc.duration_minutes));
+    setPhotos([]);
+    setModalTab('details');
+    loadPhotos(svc.id);
     setModal(true);
   };
 
@@ -58,6 +133,7 @@ export default function ServicesScreen() {
     if (!svcName || !svcPrice) {
       Alert.alert('Erro', 'Nome e preço são obrigatórios.'); return;
     }
+    if (!activeShop) return;
     setSaving(true);
     try {
       const payload = {
@@ -66,24 +142,31 @@ export default function ServicesScreen() {
       };
       if (editing) {
         await BarbershopService.updateService(editing.id, payload);
+        await loadServices();
+        setModal(false);
       } else {
-        await BarbershopService.createService(selectedShop.id, payload);
+        const newSvc = await BarbershopService.createActiveService(payload);
+        await loadServices();
+        setEditing(newSvc);
+        setModalTab('photos');
+        loadPhotos(newSvc.id);
+        Alert.alert('Serviço criado!', 'Agora podes adicionar fotos a este serviço no separador "Fotos".');
       }
-      await loadServices(selectedShop.id);
-      setModal(false);
     } catch (e: any) {
       Alert.alert('Erro', e.response?.data?.detail || 'Erro ao guardar serviço.');
     } finally { setSaving(false); }
   };
 
   const handleToggle = async (svc: any) => {
+    if (!activeShop) return;
     try {
       await BarbershopService.updateService(svc.id, { is_active: !svc.is_active });
-      await loadServices(selectedShop.id);
+      await loadServices();
     } catch { Alert.alert('Erro', 'Não foi possível alterar o estado.'); }
   };
 
   const handleDelete = (svc: any) => {
+    if (!activeShop) return;
     Alert.alert(
       'Eliminar Serviço',
       `Tens a certeza que queres eliminar "${svc.name}"?`,
@@ -94,7 +177,7 @@ export default function ServicesScreen() {
           onPress: async () => {
             try {
               await BarbershopService.deleteService(svc.id);
-              await loadServices(selectedShop.id);
+              await loadServices();
             } catch { Alert.alert('Erro', 'Não foi possível eliminar.'); }
           }
         }
@@ -117,21 +200,7 @@ export default function ServicesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Seletor de loja */}
-      {shops.length > 1 && (
-        <View style={styles.shopSelector}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {shops.map((s) => (
-              <TouchableOpacity
-                key={s.id}
-                style={[styles.shopTab, selectedShop?.id === s.id && styles.shopTabActive]}
-                onPress={() => setSelected(s)}
-              >
-                <Text style={[styles.shopTabText, selectedShop?.id === s.id && styles.shopTabTextActive]}>{s.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
+      <ShopSelectorHeader />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
         <View style={styles.listHeader}>
@@ -198,52 +267,133 @@ export default function ServicesScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={styles.modalForm}>
-            <View style={styles.inputGroup}>
-              <Scissors size={18} color={Colors.mutedForeground} />
+          {/* Modal Tabs Selector */}
+          <View style={styles.modalTabs}>
+            <TouchableOpacity
+              style={[styles.modalTab, modalTab === 'details' && styles.modalTabActive]}
+              onPress={() => setModalTab('details')}
+            >
+              <Text style={[styles.modalTabText, modalTab === 'details' && styles.modalTabTextActive]}>
+                Dados do Serviço
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.modalTab,
+                modalTab === 'photos' && styles.modalTabActive,
+                !editing && styles.modalTabDisabled
+              ]}
+              onPress={() => {
+                if (editing) {
+                  setModalTab('photos');
+                } else {
+                  Alert.alert('Aviso', 'Cria primeiro o serviço para poderes adicionar fotos.');
+                }
+              }}
+            >
+              <Text style={[
+                styles.modalTabText,
+                modalTab === 'photos' && styles.modalTabTextActive,
+                !editing && styles.modalTabTextDisabled
+              ]}>
+                Fotos do Serviço
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {modalTab === 'details' && (
+            <ScrollView contentContainerStyle={styles.modalForm}>
+              <View style={styles.inputGroup}>
+                <Scissors size={18} color={Colors.mutedForeground} />
+                <TextInput
+                  style={styles.input} placeholder="Nome do serviço *"
+                  value={svcName} onChangeText={setSvcName}
+                  placeholderTextColor={Colors.mutedForeground}
+                />
+              </View>
+
               <TextInput
-                style={styles.input} placeholder="Nome do serviço *"
-                value={svcName} onChangeText={setSvcName}
+                style={[styles.input, styles.textArea]}
+                placeholder="Descrição do serviço"
+                value={svcDesc} onChangeText={setSvcDesc}
+                multiline numberOfLines={3}
                 placeholderTextColor={Colors.mutedForeground}
               />
-            </View>
 
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Descrição do serviço"
-              value={svcDesc} onChangeText={setSvcDesc}
-              multiline numberOfLines={3}
-              placeholderTextColor={Colors.mutedForeground}
-            />
-
-            <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-              <View style={[styles.inputGroup, { flex: 1 }]}>
-                <DollarSign size={18} color={Colors.mutedForeground} />
-                <TextInput
-                  style={styles.input} placeholder="Preço (Kz) *"
-                  value={svcPrice} onChangeText={setSvcPrice} keyboardType="numeric"
-                  placeholderTextColor={Colors.mutedForeground}
-                />
+              <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <DollarSign size={18} color={Colors.mutedForeground} />
+                  <TextInput
+                    style={styles.input} placeholder="Preço (Kz) *"
+                    value={svcPrice} onChangeText={setSvcPrice} keyboardType="numeric"
+                    placeholderTextColor={Colors.mutedForeground}
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Clock size={18} color={Colors.mutedForeground} />
+                  <TextInput
+                    style={styles.input} placeholder="Duração (min)"
+                    value={svcDuration} onChangeText={setSvcDuration} keyboardType="numeric"
+                    placeholderTextColor={Colors.mutedForeground}
+                  />
+                </View>
               </View>
-              <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Clock size={18} color={Colors.mutedForeground} />
-                <TextInput
-                  style={styles.input} placeholder="Duração (min)"
-                  value={svcDuration} onChangeText={setSvcDuration} keyboardType="numeric"
-                  placeholderTextColor={Colors.mutedForeground}
-                />
-              </View>
-            </View>
 
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
-              {saving ? <ActivityIndicator color={Colors.primaryForeground} /> : (
-                <>
-                  <Save size={18} color={Colors.primaryForeground} />
-                  <Text style={styles.saveBtnText}>{editing ? 'Guardar Alterações' : 'Criar Serviço'}</Text>
-                </>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
+                {saving ? <ActivityIndicator color={Colors.primaryForeground} /> : (
+                  <>
+                    <Save size={18} color={Colors.primaryForeground} />
+                    <Text style={styles.saveBtnText}>{editing ? 'Guardar Alterações' : 'Criar Serviço'}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          )}
+
+          {modalTab === 'photos' && (
+            <ScrollView contentContainerStyle={styles.modalPhotosContainer}>
+              <Text style={styles.sectionTitle}>Fotos associadas ({photos.length})</Text>
+
+              {loadingPhotos ? (
+                <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.xl }} />
+              ) : photos.length === 0 ? (
+                <View style={styles.noPhotosContainer}>
+                  <Camera size={36} color={Colors.mutedForeground} strokeWidth={1} />
+                  <Text style={styles.noPhotosText}>Sem fotos para este serviço</Text>
+                  <Text style={styles.noPhotosSub}>Adiciona imagens para mostrar aos clientes o teu trabalho.</Text>
+                </View>
+              ) : (
+                <View style={styles.photosGrid}>
+                  {photos.map((item) => (
+                    <View key={item.id} style={styles.photoWrapper}>
+                      <Image source={{ uri: item.url }} style={styles.photoImage} />
+                      <TouchableOpacity
+                        style={styles.deletePhotoBtn}
+                        onPress={() => handleDeletePhoto(item.id)}
+                      >
+                        <Trash size={14} color={Colors.error} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
               )}
-            </TouchableOpacity>
-          </ScrollView>
+
+              <TouchableOpacity
+                style={[styles.addPhotoBtn, uploadingPhoto && styles.disabledBtn]}
+                onPress={handlePickAndUploadPhoto}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <ActivityIndicator color={Colors.primaryForeground} />
+                ) : (
+                  <>
+                    <Camera size={18} color={Colors.primaryForeground} />
+                    <Text style={styles.addPhotoBtnText}>Carregar Nova Foto</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          )}
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -320,4 +470,118 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, borderRadius: Radius.md, paddingVertical: 16, ...Shadows.gold,
   },
   saveBtnText: { fontSize: 17, fontWeight: '800', color: Colors.primaryForeground },
+
+  // New styles for photo management in Modal
+  modalTabs: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  modalTab: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  modalTabActive: {
+    borderBottomColor: Colors.primary,
+  },
+  modalTabDisabled: {
+    opacity: 0.5,
+  },
+  modalTabText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.mutedForeground,
+  },
+  modalTabTextActive: {
+    color: Colors.primary,
+  },
+  modalTabTextDisabled: {
+    color: Colors.mutedForeground,
+  },
+  modalPhotosContainer: {
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.foreground,
+    marginBottom: Spacing.xs,
+  },
+  noPhotosContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xxl,
+    gap: Spacing.xs,
+  },
+  noPhotosText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.foreground,
+    marginTop: Spacing.xs,
+  },
+  noPhotosSub: {
+    fontSize: 13,
+    color: Colors.mutedForeground,
+    textAlign: 'center',
+  },
+  photosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  photoWrapper: {
+    width: '31%',
+    aspectRatio: 1,
+    borderRadius: Radius.md,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: Colors.surface2,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  deletePhotoBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+    elevation: 2,
+  },
+  addPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.md,
+    paddingVertical: 14,
+    marginTop: Spacing.sm,
+    ...Shadows.gold,
+  },
+  addPhotoBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.primaryForeground,
+  },
+  disabledBtn: {
+    opacity: 0.7,
+  },
 });

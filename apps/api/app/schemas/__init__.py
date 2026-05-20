@@ -31,6 +31,10 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class ShopSwitchRequest(BaseModel):
+    shop_id: int
+
+
 # ── USER SCHEMAS ──────────────────────────────────────────────────────────────
 
 class UserBase(BaseModel):
@@ -81,6 +85,34 @@ class Photo(PhotoBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+# ── SERVICE PHOTO SCHEMAS ──────────────────────────────────────────────────────
+
+class ServicePhotoBase(BaseModel):
+    url: str
+    caption: Optional[str] = None
+    display_order: Optional[int] = 0
+
+
+class ServicePhotoCreate(ServicePhotoBase):
+    service_id: int
+    shop_id: int
+
+
+class ServicePhotoUpdate(BaseModel):
+    caption: Optional[str] = None
+    display_order: Optional[int] = None
+
+
+class ServicePhoto(ServicePhotoBase):
+    id: int
+    service_id: int
+    shop_id: int
+    uploaded_by: Optional[int] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # ── SERVICE SCHEMAS ───────────────────────────────────────────────────────────
 
 class ServiceBase(BaseModel):
@@ -105,6 +137,7 @@ class ServiceResponse(ServiceBase):
     id: int
     barbershop_id: int
     created_at: datetime
+    photos: List[ServicePhoto] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -223,5 +256,15 @@ class Review(ReviewBase):
     created_at: datetime
     
     user: Optional[User] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReviewPaginationResponse(BaseModel):
+    items: List[Review]
+    total: int
+    page: int
+    per_page: int
+    pages: int
 
     model_config = ConfigDict(from_attributes=True)

@@ -26,6 +26,12 @@ export const BookingService = {
     return response.data;
   },
 
+  // Marcações da barbearia activa (só o dono, usando a sessão do JWT)
+  getActiveShopBookings: async () => {
+    const response = await api.get('/bookings');
+    return response.data;
+  },
+
   // Marcações de uma barbearia (só o dono)
   barbershopBookings: async (barbershopId: number) => {
     const response = await api.get(`/bookings/barbershop/${barbershopId}`);

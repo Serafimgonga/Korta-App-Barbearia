@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from typing import Optional
 from app.models import (
-    User, Barbershop, Service, Booking, Review, Photo,
+    User, Barbershop, Service, Booking, Review, Photo, ServicePhoto,
     UserRole, BarberStatus, BookingStatus
 )
 
@@ -286,5 +286,40 @@ class PhotoRepository:
 
     @staticmethod
     def delete(db: Session, photo: Photo) -> None:
+        db.delete(photo)
+        db.commit()
+
+
+# ── SERVICE PHOTO REPOSITORY ──────────────────────────────────────────────────
+
+class ServicePhotoRepository:
+
+    @staticmethod
+    def get_by_id(db: Session, photo_id: int) -> Optional[ServicePhoto]:
+        return db.query(ServicePhoto).filter(ServicePhoto.id == photo_id).first()
+
+    @staticmethod
+    def get_by_service(db: Session, service_id: int) -> list[ServicePhoto]:
+        return db.query(ServicePhoto).filter(ServicePhoto.service_id == service_id).order_by(ServicePhoto.display_order.asc()).all()
+
+    @staticmethod
+    def create(db: Session, **kwargs) -> ServicePhoto:
+        photo = ServicePhoto(**kwargs)
+        db.add(photo)
+        db.commit()
+        db.refresh(photo)
+        return photo
+
+    @staticmethod
+    def update(db: Session, photo: ServicePhoto, **kwargs) -> ServicePhoto:
+        for key, value in kwargs.items():
+            if value is not None:
+                setattr(photo, key, value)
+        db.commit()
+        db.refresh(photo)
+        return photo
+
+    @staticmethod
+    def delete(db: Session, photo: ServicePhoto) -> None:
         db.delete(photo)
         db.commit()

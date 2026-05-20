@@ -1,267 +1,426 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, ActivityIndicator, Alert
+  SafeAreaView, ActivityIndicator, Alert, RefreshControl
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Tabs } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store/auth';
-import { BarbershopService } from '../../src/services/barbershops';
+import { useBarberStore } from '../../src/store/barber';
+import { BookingService } from '../../src/services/bookings';
+import ShopSelectorHeader from '../../src/components/ShopSelectorHeader';
 import {
-  Star, Users, Calendar, TrendingUp,
-  Plus, LogOut, Scissors, ChevronRight,
+  Calendar, Scissors, Image as ImageIcon, Settings,
+  ChevronRight, Plus, LogOut, Star
 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 
 export default function BarberDashboard() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
-  const [shops, setShops] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { logout } = useAuthStore();
+  const { shops, activeShop, loading, loadShops } = useBarberStore();
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
 
   useEffect(() => {
     loadShops();
   }, []);
 
-  const loadShops = async () => {
+  const loadDashboardData = async () => {
+    if (!activeShop) return;
+    setDataLoading(true);
     try {
-      const data = await BarbershopService.getMyBarbershops();
-      setShops(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setShops([]);
+      const data = await BookingService.getActiveShopBookings();
+      setBookings(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Erro ao carregar dados do dashboard:", error);
+      setBookings([]);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (activeShop) {
+      loadDashboardData();
+    } else {
+      setBookings([]);
+    }
+  }, [activeShop]);
+
   const handleLogout = async () => {
+    useBarberStore.getState().reset();
     await logout();
     router.replace('/');
   };
 
-  const totalReviews = shops.reduce((s, b) => s + (b.total_reviews || 0), 0);
-  const avgRating = shops.length > 0
-    ? (shops.reduce((s, b) => s + (b.average_rating || 0), 0) / shops.length).toFixed(1)
-    : '—';
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadShops();
+    if (activeShop) {
+      await loadDashboardData();
+    }
+    setRefreshing(false);
+  };
+
+  // Obter data local formatada YYYY-MM-DD
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = getLocalDateString();
+  const todayBookings = bookings.filter(b => b.date === todayStr && b.status !== 'cancelled');
+  const todayBookingsCount = todayBookings.length;
+  
+  const todayRevenue = todayBookings
+    .filter(b => b.status === 'confirmed' || b.status === 'completed')
+    .reduce((sum, b) => sum + (b.total_price || 0), 0);
+
+  const pendingCount = bookings.filter(b => b.status === 'pending').length;
+
+  const handleDefinicoesPress = () => {
+    Alert.alert(
+      'Definições',
+      'Menu de configurações e encerramento de sessão.',
+      [
+        { text: 'Editar Barbearia', onPress: () => router.push('/(barber)/my-shop') },
+        { text: 'Terminar Sessão', onPress: handleLogout, style: 'destructive' },
+        { text: 'Cancelar', style: 'cancel' }
+      ]
+    );
+  };
+
+  const handleFotosPress = () => {
+    Alert.alert(
+      'Galeria de Fotos',
+      'O upload e gestão de fotos do portfólio estarão disponíveis na próxima actualização.',
+      [{ text: 'Entendido' }]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <ScrollView showsVerticalScrollIndicator={false}>
+      {/* Oculta o cabeçalho padrão das Tabs para usarmos o nosso seletor personalizado */}
+      <Tabs.Screen options={{ headerShown: false }} />
 
-        {/* Header de boas-vindas */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.avatar}>
-              <Scissors size={28} color={Colors.primary} strokeWidth={1.5} />
-            </View>
-            <View>
-              <Text style={styles.greeting}>Bem-vindo, 👋</Text>
-              <Text style={styles.name}>{user?.name}</Text>
-              <View style={styles.badge}>
-                <Scissors size={10} color={Colors.primaryForeground} />
-                <Text style={styles.badgeText}>BARBEIRO PRO</Text>
-              </View>
-            </View>
-          </View>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-            <LogOut size={20} color={Colors.mutedForeground} />
-          </TouchableOpacity>
-        </View>
+      {/* Topbar Selector de Barbearia */}
+      <ShopSelectorHeader
+        showCreateOption
+        onCreatePress={() => router.push('/(barber)/my-shop')}
+      />
 
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <View style={styles.statIcon}><Star size={18} color={Colors.primary} /></View>
-            <Text style={styles.statValue}>{avgRating}</Text>
-            <Text style={styles.statLabel}>Avaliação Média</Text>
-          </View>
-          <View style={styles.statCard}>
-            <View style={styles.statIcon}><Users size={18} color={Colors.primary} /></View>
-            <Text style={styles.statValue}>{totalReviews}</Text>
-            <Text style={styles.statLabel}>Total Reviews</Text>
-          </View>
-          <View style={styles.statCard}>
-            <View style={styles.statIcon}><TrendingUp size={18} color={Colors.primary} /></View>
-            <Text style={styles.statValue}>{shops.length}</Text>
-            <Text style={styles.statLabel}>Barbearias</Text>
-          </View>
-        </View>
-
-        {/* Acções Rápidas */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Acções Rápidas</Text>
-          <View style={styles.actionsGrid}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
+      >
+        {shops.length === 0 ? (
+          /* Sem barbearias criadas */
+          <View style={styles.emptyCard}>
+            <Scissors size={48} color={Colors.mutedForeground} strokeWidth={1} />
+            <Text style={styles.emptyTitle}>Ainda sem barbearias</Text>
+            <Text style={styles.emptyDesc}>
+              Cria a tua primeira barbearia para começar a receber agendamentos e gerir os teus serviços.
+            </Text>
             <TouchableOpacity
-              style={styles.actionCard}
+              style={styles.createBtn}
               onPress={() => router.push('/(barber)/my-shop')}
             >
-              <View style={styles.actionIcon}><Plus size={22} color={Colors.primaryForeground} /></View>
-              <Text style={styles.actionText}>Nova{'\n'}Barbearia</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => router.push('/(barber)/services')}
-            >
-              <View style={styles.actionIcon}><Scissors size={22} color={Colors.primaryForeground} /></View>
-              <Text style={styles.actionText}>Gerir{'\n'}Serviços</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => router.push('/(barber)/my-bookings')}
-            >
-              <View style={styles.actionIcon}><Calendar size={22} color={Colors.primaryForeground} /></View>
-              <Text style={styles.actionText}>Ver{'\n'}Agendamentos</Text>
+              <Plus size={18} color={Colors.primaryForeground} />
+              <Text style={styles.createBtnText}>Criar Barbearia</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        ) : (
+          /* Painel da barbearia ativa */
+          <View style={styles.dashboardContent}>
+            {dataLoading && bookings.length === 0 && (
+              <ActivityIndicator color={Colors.primary} style={styles.loader} />
+            )}
 
-        {/* Minhas Barbearias */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>As Minhas Barbearias</Text>
+            {/* Secção Hoje */}
+            <Text style={styles.sectionLabel}>Hoje</Text>
+            
+            <View style={styles.statGrid}>
+              <View style={styles.statCard}>
+                <Text style={styles.statLabel}>Marcações</Text>
+                <Text style={styles.statValue}>{todayBookingsCount}</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statLabel}>Receita</Text>
+                <Text style={[styles.statValue, { fontSize: 16 }]} numberOfLines={1}>
+                  {todayRevenue.toLocaleString('pt-AO')} Kz
+                </Text>
+              </View>
+            </View>
 
-          {loading ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginTop: Spacing.lg }} />
-          ) : shops.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Scissors size={40} color={Colors.mutedForeground} strokeWidth={1} />
-              <Text style={styles.emptyTitle}>Ainda sem barbearias</Text>
-              <Text style={styles.emptyDesc}>
-                Cria a tua primeira barbearia e começa a receber agendamentos.
-              </Text>
+            {/* Secção Menu */}
+            <View style={styles.menuSection}>
+              {/* Marcações */}
               <TouchableOpacity
-                style={styles.createBtn}
-                onPress={() => router.push('/(barber)/my-shop')}
+                style={styles.menuItem}
+                activeOpacity={0.7}
+                onPress={() => router.push('/(barber)/my-bookings')}
               >
-                <Plus size={18} color={Colors.primaryForeground} />
-                <Text style={styles.createBtnText}>Criar Barbearia</Text>
+                <View style={[styles.menuIconContainer, { backgroundColor: '#EDE9FE' }]}>
+                  <Calendar size={16} color="#5B21B6" />
+                </View>
+                <Text style={styles.menuText}>Marcações</Text>
+                {pendingCount > 0 ? (
+                  <View style={styles.menuBadge}>
+                    <Text style={styles.menuBadgeText}>
+                      {pendingCount === 1 ? '1 nova' : `${pendingCount} novas`}
+                    </Text>
+                  </View>
+                ) : (
+                  <ChevronRight size={16} color={Colors.mutedForeground} style={styles.chevronRight} />
+                )}
+              </TouchableOpacity>
+
+              {/* Serviços */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.7}
+                onPress={() => router.push('/(barber)/services')}
+              >
+                <View style={[styles.menuIconContainer, { backgroundColor: '#E1F5EE' }]}>
+                  <Scissors size={16} color="#0F6E56" />
+                </View>
+                <Text style={styles.menuText}>Serviços</Text>
+                <ChevronRight size={16} color={Colors.mutedForeground} style={styles.chevronRight} />
+              </TouchableOpacity>
+
+              {/* Fotos */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.7}
+                onPress={handleFotosPress}
+              >
+                <View style={[styles.menuIconContainer, { backgroundColor: '#FAEEDA' }]}>
+                  <ImageIcon size={16} color="#854F0B" />
+                </View>
+                <Text style={styles.menuText}>Fotos</Text>
+                <ChevronRight size={16} color={Colors.mutedForeground} style={styles.chevronRight} />
+              </TouchableOpacity>
+
+              {/* Definições */}
+              <TouchableOpacity
+                style={[styles.menuItem, { borderBottomWidth: 0 }]}
+                activeOpacity={0.7}
+                onPress={handleDefinicoesPress}
+              >
+                <View style={[styles.menuIconContainer, { backgroundColor: '#F1EFE8' }]}>
+                  <Settings size={16} color="#5F5E5A" />
+                </View>
+                <Text style={styles.menuText}>Definições</Text>
+                <ChevronRight size={16} color={Colors.mutedForeground} style={styles.chevronRight} />
               </TouchableOpacity>
             </View>
-          ) : (
-            shops.map((shop) => (
-              <TouchableOpacity
-                key={shop.id}
-                style={styles.shopCard}
-                activeOpacity={0.8}
-                onPress={() => router.push('/(barber)/my-shop')}
-              >
-                <View style={styles.shopCardLeft}>
-                  <View style={[
-                    styles.shopStatusDot,
-                    { backgroundColor: shop.status === 'open' ? Colors.success : Colors.error }
-                  ]} />
-                  <View>
-                    <Text style={styles.shopName}>{shop.name}</Text>
-                    <Text style={styles.shopCity}>{shop.city}</Text>
-                    <View style={styles.shopMeta}>
-                      <Star size={12} color={Colors.primary} fill={Colors.primary} />
-                      <Text style={styles.shopRating}>{shop.average_rating?.toFixed(1)}</Text>
-                      <Text style={styles.shopReviews}>({shop.total_reviews} reviews)</Text>
-                      {shop.is_premium && (
-                        <View style={styles.premiumBadge}>
-                          <Text style={styles.premiumText}>PREMIUM</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
+
+            {/* Detalhes Rápidos da Barbearia Activa */}
+            {activeShop && (
+              <View style={styles.shopDetailCard}>
+                <Text style={styles.shopDetailTitle}>Barbearia Selecionada</Text>
+                <Text style={styles.shopDetailName}>{activeShop.name}</Text>
+                <Text style={styles.shopDetailInfo}>📍 {activeShop.city} · {activeShop.address}</Text>
+                <Text style={styles.shopDetailInfo}>⏰ {activeShop.open_hours || 'Horário não definido'}</Text>
+                <View style={styles.shopDetailMeta}>
+                  <Star size={14} color={Colors.primary} fill={Colors.primary} />
+                  <Text style={styles.shopDetailRating}>
+                    {activeShop.average_rating?.toFixed(1) || '0.0'} ({activeShop.total_reviews || 0} avaliações)
+                  </Text>
                 </View>
-                <ChevronRight size={18} color={Colors.mutedForeground} />
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: Spacing.xl, paddingTop: Spacing.lg,
-    backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border,
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  avatar: {
-    width: 56, height: 56, borderRadius: Radius.full,
-    backgroundColor: Colors.surface2, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: Colors.primary,
+  scrollContent: {
+    flexGrow: 1,
   },
-  greeting: { fontSize: 13, color: Colors.mutedForeground },
-  name: { fontSize: 20, fontWeight: '900', color: Colors.foreground },
-  badge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: Radius.full, marginTop: 4, alignSelf: 'flex-start',
+  dashboardContent: {
+    flex: 1,
   },
-  badgeText: { fontSize: 9, fontWeight: '900', color: Colors.primaryForeground, letterSpacing: 1 },
-  logoutBtn: { padding: Spacing.sm },
-
-  statsRow: {
-    flexDirection: 'row', gap: Spacing.md,
-    padding: Spacing.xl, paddingBottom: 0,
+  loader: {
+    marginVertical: Spacing.md,
+  },
+  sectionLabel: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xs,
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.mutedForeground,
+    textTransform: 'uppercase',
+    letterSpacing: 0.05,
+  },
+  statGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
   },
   statCard: {
-    flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.lg,
-    padding: Spacing.md, alignItems: 'center', borderWidth: 1, borderColor: Colors.border,
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.sm,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  statIcon: {
-    width: 36, height: 36, borderRadius: Radius.full,
-    backgroundColor: Colors.accent, justifyContent: 'center', alignItems: 'center', marginBottom: 6,
+  statLabel: {
+    fontSize: 11,
+    color: Colors.mutedForeground,
+    marginBottom: 4,
   },
-  statValue: { fontSize: 22, fontWeight: '900', color: Colors.foreground },
-  statLabel: { fontSize: 10, color: Colors.mutedForeground, textAlign: 'center', marginTop: 2 },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.foreground,
+  },
+  menuSection: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.surface,
+    marginTop: Spacing.sm,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  menuIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.sm - 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.foreground,
+  },
+  menuBadge: {
+    marginLeft: 'auto',
+    backgroundColor: '#D85A30',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+  },
+  menuBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  chevronRight: {
+    marginLeft: 'auto',
+  },
 
-  section: { padding: Spacing.xl, paddingBottom: 0 },
-  sectionTitle: {
-    fontSize: 11, fontWeight: '900', color: Colors.primary,
-    letterSpacing: 2, textTransform: 'uppercase', marginBottom: Spacing.md,
-  },
-
-  actionsGrid: { flexDirection: 'row', gap: Spacing.md },
-  actionCard: {
-    flex: 1, backgroundColor: Colors.surface2, borderRadius: Radius.lg,
-    padding: Spacing.md, alignItems: 'center', gap: 8,
-    borderWidth: 1, borderColor: Colors.border,
-  },
-  actionIcon: {
-    width: 48, height: 48, borderRadius: Radius.full,
-    backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center',
-    ...Shadows.gold,
-  },
-  actionText: { fontSize: 12, fontWeight: '700', color: Colors.foreground, textAlign: 'center' },
-
+  // Empty state styles
   emptyCard: {
-    backgroundColor: Colors.surface, borderRadius: Radius.xl,
-    padding: Spacing.xxl, alignItems: 'center', borderWidth: 1, borderColor: Colors.border, gap: 8,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.xl,
+    padding: Spacing.xxl,
+    margin: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 12,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: Colors.foreground },
-  emptyDesc: { fontSize: 14, color: Colors.mutedForeground, textAlign: 'center', lineHeight: 20 },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.foreground,
+    textAlign: 'center',
+  },
+  emptyDesc: {
+    fontSize: 14,
+    color: Colors.mutedForeground,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   createBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: Colors.primary, borderRadius: Radius.md,
-    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, marginTop: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.md,
     ...Shadows.gold,
   },
-  createBtnText: { fontSize: 15, fontWeight: '800', color: Colors.primaryForeground },
+  createBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.primaryForeground,
+  },
 
-  shopCard: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: Colors.surface, borderRadius: Radius.lg,
-    padding: Spacing.md, marginBottom: Spacing.md,
-    borderWidth: 1, borderColor: Colors.border,
+  // Active shop details card
+  shopDetailCard: {
+    margin: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.sm,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 4,
   },
-  shopCardLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flex: 1 },
-  shopStatusDot: { width: 10, height: 10, borderRadius: 5 },
-  shopName: { fontSize: 16, fontWeight: '800', color: Colors.foreground },
-  shopCity: { fontSize: 13, color: Colors.mutedForeground, marginTop: 2 },
-  shopMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  shopRating: { fontSize: 13, fontWeight: '700', color: Colors.primary },
-  shopReviews: { fontSize: 12, color: Colors.mutedForeground },
-  premiumBadge: {
-    backgroundColor: Colors.primary, paddingHorizontal: 6, paddingVertical: 1, borderRadius: Radius.full,
+  shopDetailTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.05,
+    marginBottom: 4,
   },
-  premiumText: { fontSize: 8, fontWeight: '900', color: Colors.primaryForeground, letterSpacing: 1 },
+  shopDetailName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.foreground,
+  },
+  shopDetailInfo: {
+    fontSize: 12,
+    color: Colors.mutedForeground,
+  },
+  shopDetailMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  shopDetailRating: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.mutedForeground,
+  },
 });

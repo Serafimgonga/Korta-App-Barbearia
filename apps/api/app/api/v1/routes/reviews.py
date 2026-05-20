@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.schemas import ReviewCreate, Review
+from app.schemas import ReviewCreate, Review, ReviewPaginationResponse
 from app.services import ReviewService
 from app.utils.dependencies import get_current_user
 from app.models import User
@@ -19,7 +19,7 @@ def create_review(
     return ReviewService.create(db, data, current_user.id)
 
 
-@router.get("/barbershop/{barbershop_id}", response_model=dict)
+@router.get("/barbershop/{barbershop_id}", response_model=ReviewPaginationResponse)
 def list_reviews(
     barbershop_id: int,
     page: int = Query(1, ge=1),

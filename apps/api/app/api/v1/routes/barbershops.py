@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.core.database import get_db
@@ -6,10 +6,12 @@ from app.schemas import (
     BarbershopCreate, BarbershopUpdate,
     BarbershopResponse, BarbershopListResponse, BarbershopListContainer,
     ServiceCreate, ServiceUpdate, ServiceResponse,
+    TokenResponse, ShopSwitchRequest
 )
 from app.services import BarbershopService, ServiceService
-from app.utils.dependencies import get_current_user, require_barber
-from app.models import User, BarberStatus
+from app.utils.dependencies import get_current_user, require_barber, get_active_shop
+from app.models import User, BarberStatus, Barbershop, Service
+from app.core.security import create_access_token, create_refresh_token
 
 router = APIRouter(prefix="/barbershops", tags=["Barbershops"])
 
@@ -40,6 +42,23 @@ def get_nearby(
     return BarbershopService.get_nearby(db, lat, lng, radius_km)
 
 
+@router.post("/switch", response_model=TokenResponse)
+def switch_active_shop(
+    data: ShopSwitchRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_barber),
+):
+    """Seleciona a barbearia ativa e devolve um novo token JWT."""
+    shop = BarbershopService.get_detail(db, data.shop_id)
+    if not shop or shop.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sem permissão para aceder a esta barbearia")
+    
+    return TokenResponse(
+        access_token=create_access_token(current_user.id, active_shop_id=shop.id),
+        refresh_token=create_refresh_token(current_user.id),
+    )
+
+
 @router.get("/mine", response_model=list[BarbershopListResponse])
 def my_barbershops(
     db: Session = Depends(get_db),
@@ -47,6 +66,25 @@ def my_barbershops(
 ):
     """Barbearias do barbeiro autenticado."""
     return BarbershopService.my_barbershops(db, current_user.id)
+
+
+@router.get("/active/services", response_model=list[ServiceResponse])
+def list_active_services(
+    db: Session = Depends(get_db),
+    active_shop: Barbershop = Depends(get_active_shop),
+):
+    """Lista os serviços da barbearia activa (isolamento automático)."""
+    return ServiceService.list_by_barbershop(db, active_shop.id)
+
+
+@router.post("/active/services", response_model=ServiceResponse, status_code=201)
+def create_active_service(
+    data: ServiceCreate,
+    db: Session = Depends(get_db),
+    active_shop: Barbershop = Depends(get_active_shop),
+):
+    """Cria um serviço na barbearia activa (isolamento automático)."""
+    return ServiceService.create(db, active_shop.id, data, active_shop.owner_id)
 
 
 @router.get("/{barbershop_id}", response_model=BarbershopResponse)
