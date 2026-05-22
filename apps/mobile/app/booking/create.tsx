@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -24,8 +24,30 @@ export default function CreateBooking() {
   
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTime, setSelectedTime] = useState('');
+  const [busySlots, setBusySlots] = useState<string[]>([]);
+  const [loadingBusySlots, setLoadingBusySlots] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const fetchBusySlots = async () => {
+    if (!barbershopId) return;
+    setLoadingBusySlots(true);
+    try {
+      const slots = await BookingService.getBusySlots(Number(barbershopId), selectedDate);
+      setBusySlots(slots);
+      if (slots.includes(selectedTime)) {
+        setSelectedTime('');
+      }
+    } catch (error) {
+      console.error('Erro ao buscar horários ocupados:', error);
+    } finally {
+      setLoadingBusySlots(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBusySlots();
+  }, [selectedDate, barbershopId]);
 
   const handleConfirm = async () => {
     if (!selectedTime) {
@@ -44,8 +66,16 @@ export default function CreateBooking() {
       });
       setSuccess(true);
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Não foi possível completar o agendamento.';
-      Alert.alert('Erro', message);
+      if (error.response?.status === 409) {
+        Alert.alert(
+          'Horário Indisponível',
+          'Esta vaga já foi reservada por outro cliente. Por favor, escolha outro horário.',
+          [{ text: 'OK', onPress: () => fetchBusySlots() }]
+        );
+      } else {
+        const message = error.response?.data?.detail || 'Não foi possível completar o agendamento.';
+        Alert.alert('Erro', message);
+      }
     } finally {
       setLoading(false);
     }
@@ -103,25 +133,32 @@ export default function CreateBooking() {
           <View style={styles.sectionHeader}>
             <Clock size={20} color={Colors.primary} />
             <Text style={styles.sectionTitle}>Escolha o Horário</Text>
+            {loadingBusySlots && <ActivityIndicator size="small" color={Colors.primary} style={{ marginLeft: 8 }} />}
           </View>
           <View style={styles.timeGrid}>
-            {TIME_SLOTS.map((slot) => (
-              <TouchableOpacity
-                key={slot}
-                style={[
-                  styles.timeSlot,
-                  selectedTime === slot && styles.timeSlotSelected
-                ]}
-                onPress={() => setSelectedTime(slot)}
-              >
-                <Text style={[
-                  styles.timeSlotText,
-                  selectedTime === slot && styles.timeSlotTextSelected
-                ]}>
-                  {slot}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {TIME_SLOTS.map((slot) => {
+              const isBusy = busySlots.includes(slot);
+              return (
+                <TouchableOpacity
+                  key={slot}
+                  style={[
+                    styles.timeSlot,
+                    selectedTime === slot && styles.timeSlotSelected,
+                    isBusy && styles.timeSlotBusy
+                  ]}
+                  onPress={() => !isBusy && setSelectedTime(slot)}
+                  disabled={isBusy || loadingBusySlots}
+                >
+                  <Text style={[
+                    styles.timeSlotText,
+                    selectedTime === slot && styles.timeSlotTextSelected,
+                    isBusy && styles.timeSlotTextBusy
+                  ]}>
+                    {slot}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
@@ -240,6 +277,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
+  timeSlotBusy: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    opacity: 0.4,
+  },
   timeSlotText: {
     fontSize: 15,
     fontWeight: '700',
@@ -247,6 +289,10 @@ const styles = StyleSheet.create({
   },
   timeSlotTextSelected: {
     color: Colors.primaryForeground,
+  },
+  timeSlotTextBusy: {
+    color: Colors.mutedForeground,
+    textDecorationLine: 'line-through',
   },
   footer: {
     padding: Spacing.xl,

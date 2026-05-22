@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, ActivityIndicator, Alert, RefreshControl
+  SafeAreaView, ActivityIndicator, Alert, RefreshControl,
+  Platform, StatusBar as RNStatusBar
 } from 'react-native';
 import { useRouter, Tabs } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
@@ -81,6 +82,12 @@ export default function BarberDashboard() {
     .filter(b => b.status === 'confirmed' || b.status === 'completed')
     .reduce((sum, b) => sum + (b.total_price || 0), 0);
 
+  const totalRevenue = bookings
+    .filter(b => b.status === 'confirmed' || b.status === 'completed')
+    .reduce((sum, b) => sum + (b.total_price || 0), 0);
+
+  const totalBookingsCount = bookings.filter(b => b.status !== 'cancelled').length;
+
   const pendingCount = bookings.filter(b => b.status === 'pending').length;
 
   const handleDefinicoesPress = () => {
@@ -155,13 +162,29 @@ export default function BarberDashboard() {
             
             <View style={styles.statGrid}>
               <View style={styles.statCard}>
-                <Text style={styles.statLabel}>Marcações</Text>
+                <Text style={styles.statLabel}>Marcações (Hoje)</Text>
                 <Text style={styles.statValue}>{todayBookingsCount}</Text>
               </View>
               <View style={styles.statCard}>
-                <Text style={styles.statLabel}>Receita</Text>
+                <Text style={styles.statLabel}>Faturamento (Hoje)</Text>
                 <Text style={[styles.statValue, { fontSize: 16 }]} numberOfLines={1}>
                   {todayRevenue.toLocaleString('pt-AO')} Kz
+                </Text>
+              </View>
+            </View>
+
+            {/* Secção Geral */}
+            <Text style={styles.sectionLabel}>Resumo Geral</Text>
+            
+            <View style={styles.statGrid}>
+              <View style={styles.statCard}>
+                <Text style={styles.statLabel}>Total de Cortes</Text>
+                <Text style={styles.statValue}>{totalBookingsCount}</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statLabel}>Receita Total</Text>
+                <Text style={[styles.statValue, { fontSize: 16, color: Colors.primary }]} numberOfLines={1}>
+                  {totalRevenue.toLocaleString('pt-AO')} Kz
                 </Text>
               </View>
             </View>
@@ -255,6 +278,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
   },
   scrollContent: {
     flexGrow: 1,

@@ -18,6 +18,17 @@ def list_bookings(
     return BookingService.barbershop_bookings(db, active_shop.id, active_shop.owner_id)
 
 
+@router.get("/busy-slots", response_model=list[str])
+def get_busy_slots(
+    barbershop_id: int,
+    date: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retorna os horários que já estão ocupados para uma determinada data."""
+    return BookingService.get_busy_slots(db, barbershop_id, date)
+
+
 
 @router.post("", response_model=BookingResponse, status_code=201)
 def create_booking(

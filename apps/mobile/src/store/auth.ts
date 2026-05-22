@@ -13,6 +13,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  initialized: boolean;
   setAuth: (user: User, token: string) => Promise<void>;
   logout: () => Promise<void>;
   initialize: () => Promise<void>;
@@ -58,17 +59,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
   isAuthenticated: false,
+  initialized: false,
 
   setAuth: async (user, token) => {
     await storage.setItem('auth_token', token);
     await storage.setItem('user_data', JSON.stringify(user));
-    set({ user, token, isAuthenticated: true });
+    set({ user, token, isAuthenticated: true, initialized: true });
   },
 
   logout: async () => {
     await storage.removeItem('auth_token');
     await storage.removeItem('user_data');
-    set({ user: null, token: null, isAuthenticated: false });
+    set({ user: null, token: null, isAuthenticated: false, initialized: true });
   },
 
   initialize: async () => {
@@ -88,5 +90,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         await storage.removeItem('user_data');
       }
     }
+    set({ initialized: true });
   },
 }));

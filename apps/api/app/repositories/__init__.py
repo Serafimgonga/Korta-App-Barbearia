@@ -221,6 +221,18 @@ class BookingRepository:
         return existing is not None
 
     @staticmethod
+    def get_busy_slots(db: Session, barbershop_id: int, date: str) -> list[str]:
+        """Retorna uma lista dos time_slots ocupados (pendentes ou confirmados)."""
+        bookings = db.query(Booking).filter(
+            and_(
+                Booking.barbershop_id == barbershop_id,
+                Booking.date == date,
+                Booking.status.in_([BookingStatus.pending, BookingStatus.confirmed]),
+            )
+        ).all()
+        return [b.time_slot for b in bookings]
+
+    @staticmethod
     def create(db: Session, **kwargs) -> Booking:
         booking = Booking(**kwargs)
         db.add(booking)

@@ -43,4 +43,10 @@ export const BookingService = {
     const response = await api.patch(`/bookings/${bookingId}/status`, payload);
     return response.data;
   },
+
+  // Obter horários ocupados para uma barbearia em determinada data
+  getBusySlots: async (barbershopId: number, date: string): Promise<string[]> => {
+    const response = await api.get(`/bookings/busy-slots?barbershop_id=${barbershopId}&date=${date}`);
+    return response.data;
+  },
 };

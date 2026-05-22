@@ -257,6 +257,13 @@ class BookingService:
 
         return BookingRepository.update_status(db, booking, data.status)
 
+    @staticmethod
+    def get_busy_slots(db: Session, barbershop_id: int, date: str) -> list[str]:
+        shop = BarbershopRepository.get_by_id(db, barbershop_id)
+        if not shop:
+            raise HTTPException(status_code=404, detail="Barbearia não encontrada")
+        return BookingRepository.get_busy_slots(db, barbershop_id, date)
+
 
 # ── REVIEW SERVICE ────────────────────────────────────────────────────────────
 
