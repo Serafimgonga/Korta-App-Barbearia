@@ -7,6 +7,7 @@ import {
 import { useRouter, Tabs } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store/auth';
+import { UserService } from '../../src/services/users';
 import { useBarberStore } from '../../src/store/barber';
 import { BookingService } from '../../src/services/bookings';
 import ShopSelectorHeader from '../../src/components/ShopSelectorHeader';
@@ -19,6 +20,7 @@ import { StatusBar } from 'expo-status-bar';
 export default function BarberDashboard() {
   const router = useRouter();
   const { logout } = useAuthStore();
+  const { user, token, setAuth } = useAuthStore();
   const { shops, activeShop, loading, loadShops } = useBarberStore();
   const [bookings, setBookings] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -265,6 +267,28 @@ export default function BarberDashboard() {
                     {activeShop.average_rating?.toFixed(1) || '0.0'} ({activeShop.total_reviews || 0} avaliações)
                   </Text>
                 </View>
+                {/* Online toggle */}
+                <View style={{ marginTop: Spacing.md }}>
+                  <TouchableOpacity
+                    style={[styles.onlineBtn, { backgroundColor: user?.is_online ? '#DCFCE7' : Colors.surface }]}
+                    onPress={async () => {
+                      try {
+                        const newState = !user?.is_online;
+                        await UserService.setOnline(newState);
+                        if (user && token) {
+                          await setAuth({ ...user, is_online: newState }, token);
+                        }
+                      } catch (e) {
+                        console.error('Erro a mudar estado online:', e);
+                        Alert.alert('Erro', 'Não foi possível atualizar o estado online.');
+                      }
+                    }}
+                  >
+                    <Text style={[styles.onlineText, { color: user?.is_online ? '#064E3B' : Colors.foreground }]}>
+                      {user?.is_online ? 'ONLINE' : 'OFFLINE'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </View>
@@ -446,5 +470,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: Colors.mutedForeground,
+  },
+  onlineBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: Radius.md,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  onlineText: {
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

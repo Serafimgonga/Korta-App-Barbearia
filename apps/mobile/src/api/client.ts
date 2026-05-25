@@ -15,7 +15,7 @@ import { useAuthStore } from '../store/auth';
  * Para emulador iOS (simulator): http://localhost:8000/api/v1
  * ─────────────────────────────────────────────────────
  */
-const NGROK_URL = 'https://53d9-105-174-52-229.ngrok-free.app'; // ← Cola aqui a URL do ngrok quando disponível
+const NGROK_URL = 'https://a142-105-174-52-229.ngrok-free.app'; // ← Cola aqui a URL do ngrok quando disponível
 
 const getBaseURL = () => {
   // Se tiver URL do ngrok configurada, usar sempre (dispositivo físico)

@@ -338,6 +338,48 @@ def test_booking_conflict_and_busy_slots():
         db.commit()
     finally:
         db.close()
+
+
+def test_dispatch_flow():
+    """E2E: cliente cria booking_request e barbeiro aceita (dispatch flow)."""
+    global client_token, barber_token, active_shop_token, barber_shop_id
+
+    # 1) Garantir que o barbeiro está online
+    headers_barber = {"Authorization": f"Bearer {barber_token}"}
+    resp = client.post("/api/v1/users/me/online", headers=headers_barber, json={"is_online": True})
+    assert resp.status_code == 200
+
+    # 2) Obter um service_id da barbearia do barbeiro
+    shop_resp = client.get(f"/api/v1/barbershops/{barber_shop_id}")
+    assert shop_resp.status_code == 200
+    services = shop_resp.json().get("services", [])
+    assert len(services) > 0
+    service_id = services[0]["id"]
+
+    # 3) Cliente cria booking_request próximo à barbearia
+    client_headers = {"Authorization": f"Bearer {client_token}"}
+    shop_detail = shop_resp.json()
+    lat = shop_detail.get("latitude") or -8.8383
+    lng = shop_detail.get("longitude") or 13.2344
+    payload = {"service_id": service_id, "lat": lat, "lng": lng, "radius_km": 5}
+
+    create_req = client.post("/api/v1/bookings/request", headers=client_headers, json=payload)
+    assert create_req.status_code == 201
+    req = create_req.json()
+    request_id = req["id"]
+
+    # 4) Barbeiro aceita o pedido usando o token com active shop
+    barber_headers = {"Authorization": f"Bearer {active_shop_token}"}
+    accept_resp = client.post(f"/api/v1/bookings/requests/{request_id}/accept", headers=barber_headers)
+    assert accept_resp.status_code == 201
+    booking = accept_resp.json()
+    assert booking["service_id"] == service_id
+
+    # 5) Cliente deve ver a booking criada no seu histórico
+    my_bookings_resp = client.get("/api/v1/bookings/me", headers=client_headers)
+    assert my_bookings_resp.status_code == 200
+    bookings = my_bookings_resp.json()
+    assert any(b["id"] == booking["id"] for b in bookings)
         
     # 2. Create the first booking
     booking_payload = {

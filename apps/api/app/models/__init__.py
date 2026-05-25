@@ -49,6 +49,7 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.client, nullable=False)
     avatar_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)
+    is_online = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -182,3 +183,31 @@ class Photo(Base):
 
     # relationships
     barbershop = relationship("Barbershop", back_populates="photos")
+
+
+class BookingRequestStatus(str, enum.Enum):
+    requested = "requested"
+    matching = "matching"
+    assigned = "assigned"
+    expired = "expired"
+    cancelled = "cancelled"
+
+
+class BookingRequest(Base):
+    __tablename__ = "booking_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    service_id = Column(Integer, ForeignKey("services.id"), nullable=False)
+    lat = Column(Float, nullable=False)
+    lng = Column(Float, nullable=False)
+    radius_km = Column(Integer, default=5)
+    status = Column(Enum(BookingRequestStatus), default=BookingRequestStatus.requested)
+    attempted_barbers = Column(Text, nullable=True)  # JSON list or comma-separated ids
+    assigned_barber_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    # relationships
+    client = relationship("User", foreign_keys=[client_id])
+    assigned_barber = relationship("User", foreign_keys=[assigned_barber_id])

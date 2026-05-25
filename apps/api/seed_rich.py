@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal, engine
 from app.models import (
     Base, User, Barbershop, Service, ServicePhoto, Booking, Review, Photo,
-    UserRole, BarberStatus, BookingStatus, PhotoType
+    UserRole, BarberStatus, BookingStatus, PhotoType, BookingRequest, BookingRequestStatus
 )
 from app.core.security import hash_password
 from datetime import datetime, timedelta
@@ -236,12 +236,18 @@ def create_barbers(db: Session):
                 role=UserRole.barber,
                 avatar_url=b["avatar"],
                 is_active=True,
+                is_online=False,
             )
             db.add(user)
             db.commit()
             db.refresh(user)
             print(f"   ✅ Barbeiro criado: {user.name} ({user.email})")
             barbers.append(user)
+    # Marcar alguns barbeiros como online para demonstração
+    if len(barbers) >= 2:
+        barbers[0].is_online = True
+        barbers[1].is_online = True
+        db.commit()
     return barbers
 
 
@@ -448,6 +454,31 @@ def seed():
 
     print("\n📅 A criar marcações...")
     create_bookings(db, shops, clients)
+
+    print("\n📡 A criar pedidos de demonstração (booking_requests)...")
+    # Criar alguns booking_requests de demonstração
+    try:
+        # escolher um cliente e um serviço de uma barbearia próxima
+        demo_client = clients[0]
+        demo_shop = shops[0]
+        demo_service = db.query(Service).filter(Service.barbershop_id == demo_shop.id).first()
+        if demo_service:
+            br = BookingRequest(
+                client_id=demo_client.id,
+                service_id=demo_service.id,
+                lat=demo_shop.latitude,
+                lng=demo_shop.longitude,
+                radius_km=5,
+                status=BookingRequestStatus.requested,
+                attempted_barbers=None,
+                assigned_barber_id=None,
+                expires_at=(datetime.utcnow() + timedelta(minutes=10)),
+            )
+            db.add(br)
+            db.commit()
+            print(f"   ✅ Booking request demo criado: id={br.id} para cliente {demo_client.email}")
+    except Exception as e:
+        print("   ⚠️  Não foi possível criar booking_requests de demo:", e)
 
     total_services = sum(8 if s.is_premium else 6 for s in shops)
     total_photos = sum(8 if s.is_premium else 6 for s in shops)

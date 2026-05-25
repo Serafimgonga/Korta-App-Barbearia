@@ -44,6 +44,7 @@ class UserBase(BaseModel):
     role: Optional[UserRole] = UserRole.client
     avatar_url: Optional[str] = None
     is_active: Optional[bool] = True
+    is_online: Optional[bool] = False
 
 
 class UserRegister(UserBase):
@@ -54,6 +55,10 @@ class UserRegister(UserBase):
 
 class UserUpdate(UserBase):
     password: Optional[str] = None
+
+
+class OnlineStatus(BaseModel):
+    is_online: bool
 
 
 class User(UserBase):
@@ -229,6 +234,32 @@ class BookingResponse(BookingBase):
     user: Optional[User] = None
     barbershop: Optional[BarbershopResponse] = None
     service: Optional[ServiceResponse] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ── BOOKING REQUEST SCHEMAS ─────────────────────────────────────────────────
+
+
+class BookingRequestBase(BaseModel):
+    service_id: Optional[int] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    radius_km: Optional[int] = 5
+    status: Optional[str] = None
+
+
+class BookingRequestCreate(BaseModel):
+    service_id: int
+    lat: float
+    lng: float
+    radius_km: Optional[int] = 5
+
+
+class BookingRequestResponse(BookingRequestBase):
+    id: int
+    client_id: int
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 

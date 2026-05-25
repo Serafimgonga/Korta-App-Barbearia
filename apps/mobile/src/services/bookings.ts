@@ -49,4 +49,22 @@ export const BookingService = {
     const response = await api.get(`/bookings/busy-slots?barbershop_id=${barbershopId}&date=${date}`);
     return response.data;
   },
+
+  // --- Booking Requests (matchmaking) ---
+  createRequest: async (payload: { service_id: number; lat: number; lng: number; radius_km?: number }) => {
+    const response = await api.post('/bookings/request', payload);
+    return response.data;
+  },
+
+  getRequest: async (requestId: number) => {
+    const response = await api.get(`/bookings/request/${requestId}`);
+    return response.data;
+  },
+
+  listPendingRequests: async (lat: number, lng: number, radius_km = 10, service_id?: number) => {
+    const q = new URLSearchParams({ lat: String(lat), lng: String(lng), radius_km: String(radius_km) });
+    if (service_id) q.append('service_id', String(service_id));
+    const response = await api.get(`/bookings/requests/pending?${q.toString()}`);
+    return response.data;
+  }
 };

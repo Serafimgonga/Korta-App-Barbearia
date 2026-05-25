@@ -6,6 +6,8 @@ from app.services import UserService
 from app.utils.dependencies import get_current_user
 from app.models import User as UserModel
 
+from app.schemas import OnlineStatus
+
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
@@ -23,3 +25,13 @@ def update_me(
 ):
     """Atualiza o perfil do utilizador autenticado."""
     return UserService.update_me(db, current_user.id, data)
+
+
+@router.post('/me/online', response_model=User)
+def set_online(
+    data: OnlineStatus,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Toggle online/offline do utilizador (barbeiro)."""
+    return UserService.set_online(db, current_user.id, data.is_online)

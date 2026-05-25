@@ -7,11 +7,16 @@ from app.repositories import (
     UserRepository, BarbershopRepository, ServiceRepository,
     BookingRepository, ReviewRepository, PhotoRepository, ServicePhotoRepository
 )
+from app.repositories import BookingRequestRepository
+from app.core.database import SessionLocal
+import time
+from datetime import datetime, timedelta
 from app.schemas import (
     UserRegister, UserLogin, TokenResponse, UserUpdate,
     BarbershopCreate, BarbershopUpdate,
     ServiceCreate, ServiceUpdate,
     BookingCreate, BookingStatusUpdate,
+    BookingRequestCreate,
     ReviewCreate, ServicePhotoCreate, ServicePhotoUpdate,
 )
 from app.models import UserRole, BookingStatus
@@ -85,6 +90,13 @@ class UserService:
         if not user:
             raise HTTPException(status_code=404, detail="Utilizador não encontrado")
         return UserRepository.update(db, user, **data.model_dump(exclude_none=True))
+
+    @staticmethod
+    def set_online(db: Session, user_id: int, is_online: bool):
+        user = UserRepository.get_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Utilizador não encontrado")
+        return UserRepository.update(db, user, is_online=is_online)
 
 
 # ── BARBERSHOP SERVICE ────────────────────────────────────────────────────────
@@ -263,6 +275,129 @@ class BookingService:
         if not shop:
             raise HTTPException(status_code=404, detail="Barbearia não encontrada")
         return BookingRepository.get_busy_slots(db, barbershop_id, date)
+
+
+# ── BOOKING REQUEST SERVICE ──────────────────────────────────────────────────
+
+
+class BookingRequestService:
+
+    @staticmethod
+    def create_request(db: Session, data: "BookingRequestCreate", user_id: int):
+        # Persistir o pedido para que barbeiros façam polling/recebam notificações
+        expires = datetime.utcnow() + timedelta(minutes=10)
+        return BookingRequestRepository.create(
+            db,
+            client_id=user_id,
+            service_id=data.service_id,
+            lat=data.lat,
+            lng=data.lng,
+            radius_km=data.radius_km,
+            expires_at=expires,
+        )
+
+    @staticmethod
+    def list_pending(db: Session, lat: float, lng: float, radius_km: int = 10, service_id: int | None = None):
+        return BookingRequestRepository.list_pending(db, lat, lng, radius_km, service_id)
+
+    @staticmethod
+    def accept_request(db: Session, request_id: int, barber_user_id: int, barbershop_id: int):
+        from app.models import BookingRequest, BookingRequestStatus
+        req = BookingRequestRepository.get_by_id(db, request_id)
+        if not req:
+            raise HTTPException(status_code=404, detail="Pedido não encontrado")
+        if req.status != BookingRequestStatus.requested:
+            raise HTTPException(status_code=409, detail="Pedido já foi processado")
+
+        # Garantir que o serviço pertence à barbearia do barbeiro
+        service = ServiceRepository.get_by_id(db, req.service_id)
+        if not service or service.barbershop_id != barbershop_id:
+            raise HTTPException(status_code=400, detail="Este serviço não pertence à barbearia ativa")
+
+        # Criar booking imediato (data/hora atual)
+        from datetime import datetime
+        now = datetime.utcnow()
+        date_str = now.strftime("%Y-%m-%d")
+        time_slot = now.strftime("%H:%M")
+
+        booking_data = BookingCreate(
+            barbershop_id=barbershop_id,
+            service_id=req.service_id,
+            date=date_str,
+            time_slot=time_slot,
+        )
+
+        booking = BookingService.create(db, booking_data, req.client_id)
+
+        # Atualizar request como atribuído
+        BookingRequestRepository.update(db, req, status=BookingRequestStatus.assigned, assigned_barber_id=barber_user_id)
+        return booking
+
+    @staticmethod
+    def dispatch_request(request_id: int):
+        """Background dispatcher: envia pedido sequencialmente para barbeiros online dentro do raio.
+
+        Estratégia simples:
+        - Pesquisar barbearias próximas (usando BarbershopRepository.get_nearby)
+        - Filtrar por disponibilidade do serviço e por dono `is_online`
+        - Enviar (simulado) para o melhor candidato e aguardar `timeout` segundos por aceitação
+        - Se ninguém aceitar, expandir raio e repetir 1 vez; finalmente marcar como `expired`.
+        """
+        from app.models import BookingRequestStatus, User
+
+        db = SessionLocal()
+        try:
+            req = BookingRequestRepository.get_by_id(db, request_id)
+            if not req:
+                return
+            if req.status != BookingRequestStatus.requested:
+                return
+
+            radius = req.radius_km or 5
+            rounds = 2
+            for r in range(rounds):
+                shops = BarbershopRepository.get_nearby(db, req.lat, req.lng, radius)
+                # Filtrar candidatos que têm o serviço e cujo owner está online
+                candidates = []
+                for shop in shops:
+                    owner = db.query(User).filter(User.id == shop.owner_id).first()
+                    if not owner or not owner.is_online:
+                        continue
+                    # verificar se a barbearia tem o serviço solicitado
+                    has_service = any((s.id == req.service_id and s.is_active) for s in shop.services)
+                    if not has_service:
+                        continue
+                    candidates.append((shop, owner))
+
+                # ordenar por proximidade aproximada
+                candidates.sort(key=lambda so: ( (so[0].latitude - req.lat) ** 2 + (so[0].longitude - req.lng) ** 2 ))
+
+                for shop, owner in candidates:
+                    # atualizar attempted_barbers
+                    attempted = [x for x in (req.attempted_barbers or "").split(",") if x]
+                    if str(owner.id) in attempted:
+                        continue
+                    attempted.append(str(owner.id))
+                    BookingRequestRepository.update(db, req, attempted_barbers=",".join(attempted), status=BookingRequestStatus.matching)
+
+                    # Aguardar por um curto período à espera de aceitação (aceitação via endpoint `/requests/{id}/accept`)
+                    timeout = 10
+                    poll_interval = 1
+                    waited = 0
+                    while waited < timeout:
+                        cur = BookingRequestRepository.get_by_id(db, request_id)
+                        if cur.status == BookingRequestStatus.assigned:
+                            return
+                        time.sleep(poll_interval)
+                        waited += poll_interval
+
+                # expandir raio e tentar novamente
+                radius = int(radius * 2)
+
+            # marcar como expirado
+            BookingRequestRepository.update(db, req, status=BookingRequestStatus.expired)
+        finally:
+            db.close()
 
 
 # ── REVIEW SERVICE ────────────────────────────────────────────────────────────

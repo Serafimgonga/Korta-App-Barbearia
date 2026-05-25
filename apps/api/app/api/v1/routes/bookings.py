@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.schemas import BookingCreate, BookingStatusUpdate, BookingResponse
-from app.services import BookingService
-from app.utils.dependencies import get_current_user, get_active_shop
+from app.schemas import (
+    BookingCreate, BookingStatusUpdate, BookingResponse,
+    BookingRequestCreate, BookingRequestResponse,
+)
+from app.services import BookingService, BookingRequestService
+from app.utils.dependencies import get_current_user, get_active_shop, require_barber
 from app.models import User, Barbershop
+from app.repositories import BookingRequestRepository
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -38,6 +42,66 @@ def create_booking(
 ):
     """Cria nova marcação. Verifica conflitos de horário automaticamente."""
     return BookingService.create(db, data, current_user.id)
+
+
+
+@router.post("/request", response_model=BookingRequestResponse, status_code=201)
+def create_booking_request(
+    data: BookingRequestCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Criar um pedido de booking para matchmaking/dispatch."""
+    req = BookingRequestService.create_request(db, data, current_user.id)
+    # Enfileirar dispatch em background (vai tentar contactar barbeiros)
+    try:
+        background_tasks.add_task(BookingRequestService.dispatch_request, req.id)
+    except Exception:
+        # se BackgroundTasks não estiver disponível (ex: chamadas internas), apenas ignora
+        pass
+    return req
+
+
+@router.get('/request/{request_id}', response_model=BookingRequestResponse)
+def get_booking_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Cliente consulta o estado do seu booking_request."""
+    req = BookingRequestRepository.get_by_id(db, request_id)
+    if not req:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail='Pedido não encontrado')
+    if req.client_id != current_user.id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail='Sem permissão para ver este pedido')
+    return req
+
+
+@router.get("/requests/pending", response_model=list[BookingRequestResponse])
+def list_pending_requests(
+    lat: float,
+    lng: float,
+    radius_km: int = 10,
+    service_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_barber),
+):
+    """Listar pedidos pendentes dentro do raio (para barbeiros)."""
+    return BookingRequestService.list_pending(db, lat, lng, radius_km, service_id)
+
+
+@router.post("/requests/{request_id}/accept", response_model=BookingResponse, status_code=201)
+def accept_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_barber),
+    active_shop: Barbershop = Depends(get_active_shop),
+):
+    """Barbeiro aceita um pedido e cria o booking correspondente (imediato)."""
+    return BookingRequestService.accept_request(db, request_id, current_user.id, active_shop.id)
 
 
 @router.get("/me", response_model=list[BookingResponse])

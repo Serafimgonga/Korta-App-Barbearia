@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from typing import Optional
 from app.models import (
-    User, Barbershop, Service, Booking, Review, Photo, ServicePhoto,
-    UserRole, BarberStatus, BookingStatus
+    User, Barbershop, Service, Booking, Review, Photo, ServicePhoto, BookingRequest,
+    UserRole, BarberStatus, BookingStatus, BookingRequestStatus
 )
 
 
@@ -335,3 +335,52 @@ class ServicePhotoRepository:
     def delete(db: Session, photo: ServicePhoto) -> None:
         db.delete(photo)
         db.commit()
+
+
+# ── BOOKING REQUEST REPOSITORY ───────────────────────────────────────────────
+
+
+class BookingRequestRepository:
+
+    @staticmethod
+    def create(db: Session, **kwargs) -> "BookingRequest":
+        from app.models import BookingRequest
+        req = BookingRequest(**kwargs)
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        return req
+
+    @staticmethod
+    def get_by_id(db: Session, request_id: int):
+        from app.models import BookingRequest
+        return db.query(BookingRequest).filter(BookingRequest.id == request_id).first()
+
+    @staticmethod
+    def list_pending(
+        db: Session,
+        lat: float,
+        lng: float,
+        radius_km: float = 10,
+        service_id: Optional[int] = None,
+    ):
+        """Retorna booking_requests dentro do raio aproximado e que ainda não foram atribuídos/expirados."""
+        from app.models import BookingRequest
+        lat_delta = radius_km / 111.0
+        query = db.query(BookingRequest).filter(
+            BookingRequest.status == BookingRequestStatus.requested,
+            BookingRequest.lat.between(lat - lat_delta, lat + lat_delta),
+            BookingRequest.lng.between(lng - lat_delta, lng + lat_delta),
+        )
+        if service_id:
+            query = query.filter(BookingRequest.service_id == service_id)
+        return query.order_by(BookingRequest.created_at.asc()).all()
+
+    @staticmethod
+    def update(db: Session, req, **kwargs):
+        for key, value in kwargs.items():
+            if value is not None:
+                setattr(req, key, value)
+        db.commit()
+        db.refresh(req)
+        return req
