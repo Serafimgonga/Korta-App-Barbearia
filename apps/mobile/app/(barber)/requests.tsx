@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { BookingService } from '../../src/services/bookings';
 import { MapPin, Clock, DollarSign, CheckCircle2, XCircle } from 'lucide-react-native';
+import { addWebSocketListener } from '../../src/hooks/useWebSocket';
 
 export default function Requests() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -39,14 +40,25 @@ export default function Requests() {
   useFocusEffect(
     React.useCallback(() => {
       fetchRequests();
-      const interval = setInterval(fetchRequests, 5000);
-      return () => clearInterval(interval);
+
+      // Subscrever a atualizações em tempo real via WebSocket
+      const removeListener = addWebSocketListener((data) => {
+        if (
+          data.type === 'new_booking_request' ||
+          data.type === 'booking_request_accepted' ||
+          data.type === 'booking_request_expired'
+        ) {
+          fetchRequests();
+        }
+      });
+
+      return () => removeListener();
     }, [])
   );
 
-  const handleAccept = async (requestId: string) => {
+  const handleAccept = async (requestId: number | string) => {
     try {
-      const booking = await BookingService.acceptRequest(requestId);
+      const booking = await BookingService.acceptRequest(Number(requestId));
       Alert.alert('✅ Sucesso', 'Pedido aceite! Novo booking criado.');
       fetchRequests();
     } catch (err) {
@@ -82,7 +94,7 @@ export default function Requests() {
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.rejectButton} onPress={() => Alert.alert('Recusado', 'Pedido recusado com sucesso.')}>
-          <XCircle size={16} color={Colors.destructive} />
+          <XCircle size={16} color={Colors.error} />
           <Text style={styles.rejectText}>Recusar</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.acceptButton} onPress={() => handleAccept(item.id)}>
@@ -162,13 +174,13 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: Colors.destructive,
+    borderColor: Colors.error,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 6,
   },
-  rejectText: { fontSize: 12, fontWeight: '700', color: Colors.destructive },
+  rejectText: { fontSize: 12, fontWeight: '700', color: Colors.error },
   acceptButton: {
     flex: 1,
     backgroundColor: Colors.primary,

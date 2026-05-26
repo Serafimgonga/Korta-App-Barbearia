@@ -104,6 +104,16 @@ def accept_request(
     return BookingRequestService.accept_request(db, request_id, current_user.id, active_shop.id)
 
 
+@router.post("/requests/{request_id}/cancel", response_model=BookingRequestResponse)
+def cancel_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Cliente cancela um pedido de booking pendente."""
+    return BookingRequestService.cancel_request(db, request_id, current_user.id)
+
+
 @router.get("/me", response_model=list[BookingResponse])
 def my_bookings(
     db: Session = Depends(get_db),

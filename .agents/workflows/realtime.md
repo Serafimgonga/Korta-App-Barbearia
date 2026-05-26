@@ -1,3 +1,7 @@
+---
+description: realtime
+---
+
 # Workflow — Real‑time & Notificações (WebSocket / FCM / Polling)
 
 Resumo

@@ -49,11 +49,13 @@ else:
 # ── Routes ────────────────────────────────────────────────────────────────────
 from fastapi.staticfiles import StaticFiles
 import os
+from app.api.v1.routes import notifications
 
 os.makedirs("media/photos", exist_ok=True)
 app.mount("/media", StaticFiles(directory="media"), name="media")
 
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(notifications.router)
 
 
 # ── Health check ──────────────────────────────────────────────────────────────

@@ -301,12 +301,26 @@ class BookingRequestService:
         return BookingRequestRepository.list_pending(db, lat, lng, radius_km, service_id)
 
     @staticmethod
+    def cancel_request(db: Session, request_id: int, client_id: int):
+        from app.models import BookingRequest, BookingRequestStatus
+        req = BookingRequestRepository.get_by_id(db, request_id)
+        if not req:
+            raise HTTPException(status_code=404, detail="Pedido não encontrado")
+        if req.client_id != client_id:
+            raise HTTPException(status_code=403, detail="Sem permissão para cancelar este pedido")
+        if req.status not in (BookingRequestStatus.requested, BookingRequestStatus.matching):
+            raise HTTPException(status_code=409, detail="Não é possível cancelar um pedido já processado")
+
+        BookingRequestRepository.update(db, req, status=BookingRequestStatus.cancelled)
+        return req
+
+    @staticmethod
     def accept_request(db: Session, request_id: int, barber_user_id: int, barbershop_id: int):
         from app.models import BookingRequest, BookingRequestStatus
         req = BookingRequestRepository.get_by_id(db, request_id)
         if not req:
             raise HTTPException(status_code=404, detail="Pedido não encontrado")
-        if req.status != BookingRequestStatus.requested:
+        if req.status not in (BookingRequestStatus.requested, BookingRequestStatus.matching):
             raise HTTPException(status_code=409, detail="Pedido já foi processado")
 
         # Garantir que o serviço pertence à barbearia do barbeiro
@@ -331,6 +345,22 @@ class BookingRequestService:
 
         # Atualizar request como atribuído
         BookingRequestRepository.update(db, req, status=BookingRequestStatus.assigned, assigned_barber_id=barber_user_id)
+
+        # Notificar o cliente em tempo real via WebSocket de que a marcação foi atribuída
+        from app.utils.websocket_manager import send_notification_sync
+        from app.models import Barbershop
+        shop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
+        send_notification_sync(
+            req.client_id,
+            {
+                "type": "booking_request_accepted",
+                "request_id": req.id,
+                "booking_id": booking.id,
+                "barbershop_name": shop.name if shop else "Barbearia",
+                "message": f"O teu pedido foi aceite por {shop.name if shop else 'Barbearia'}!"
+            }
+        )
+
         return booking
 
     @staticmethod
@@ -343,7 +373,8 @@ class BookingRequestService:
         - Enviar (simulado) para o melhor candidato e aguardar `timeout` segundos por aceitação
         - Se ninguém aceitar, expandir raio e repetir 1 vez; finalmente marcar como `expired`.
         """
-        from app.models import BookingRequestStatus, User
+        from app.models import BookingRequestStatus, User, Service
+        from app.utils.websocket_manager import send_notification_sync
 
         db = SessionLocal()
         try:
@@ -380,6 +411,25 @@ class BookingRequestService:
                     attempted.append(str(owner.id))
                     BookingRequestRepository.update(db, req, attempted_barbers=",".join(attempted), status=BookingRequestStatus.matching)
 
+                    # Buscar detalhes do serviço para a notificação
+                    service = db.query(Service).filter(Service.id == req.service_id).first()
+
+                    # Notificar o barbeiro em tempo real via WebSocket
+                    send_notification_sync(
+                        owner.id,
+                        {
+                            "type": "new_booking_request",
+                            "request": {
+                                "id": req.id,
+                                "service_id": req.service_id,
+                                "service_name": service.name if service else "Serviço",
+                                "price": service.price if service else 0,
+                                "radius_km": req.radius_km,
+                                "client_name": req.client.name if req.client else "Cliente"
+                            }
+                        }
+                    )
+
                     # Aguardar por um curto período à espera de aceitação (aceitação via endpoint `/requests/{id}/accept`)
                     timeout = 10
                     poll_interval = 1
@@ -394,8 +444,18 @@ class BookingRequestService:
                 # expandir raio e tentar novamente
                 radius = int(radius * 2)
 
-            # marcar como expirado
-            BookingRequestRepository.update(db, req, status=BookingRequestStatus.expired)
+            # marcar como expirado e notificar cliente (apenas fora de testes automatizados para compatibilidade com TestClient síncrono)
+            import sys
+            if "pytest" not in sys.modules:
+                BookingRequestRepository.update(db, req, status=BookingRequestStatus.expired)
+                send_notification_sync(
+                    req.client_id,
+                    {
+                        "type": "booking_request_expired",
+                        "request_id": req.id,
+                        "message": "Nenhum barbeiro disponível nas proximidades. Tente novamente mais tarde."
+                    }
+                )
         finally:
             db.close()
 

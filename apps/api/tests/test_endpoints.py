@@ -339,6 +339,40 @@ def test_booking_conflict_and_busy_slots():
     finally:
         db.close()
 
+    # 2. Create the first booking
+    booking_payload = {
+        "barbershop_id": barber_shop_id,
+        "service_id": service_id,
+        "date": date_str,
+        "time_slot": slot_str,
+        "notes": "Primeiro agendamento."
+    }
+    create_resp1 = client.post("/api/v1/bookings", headers=client_headers, json=booking_payload)
+    assert create_resp1.status_code == 201
+    booking1_id = create_resp1.json()["id"]
+
+    # 3. Check busy slots
+    busy_resp = client.get(
+        f"/api/v1/bookings/busy-slots?barbershop_id={barber_shop_id}&date={date_str}",
+        headers=client_headers
+    )
+    assert busy_resp.status_code == 200
+    busy_slots = busy_resp.json()
+    assert slot_str in busy_slots
+
+    # 4. Try to create second booking on the same slot
+    create_resp2 = client.post("/api/v1/bookings", headers=client_headers, json=booking_payload)
+    assert create_resp2.status_code == 409
+    assert create_resp2.json()["detail"] == "Horário já está ocupado"
+
+    # Clean up
+    db = next(get_db())
+    try:
+        db.query(Booking).filter(Booking.id == booking1_id).delete()
+        db.commit()
+    finally:
+        db.close()
+
 
 def test_dispatch_flow():
     """E2E: cliente cria booking_request e barbeiro aceita (dispatch flow)."""
@@ -371,7 +405,7 @@ def test_dispatch_flow():
     # 4) Barbeiro aceita o pedido usando o token com active shop
     barber_headers = {"Authorization": f"Bearer {active_shop_token}"}
     accept_resp = client.post(f"/api/v1/bookings/requests/{request_id}/accept", headers=barber_headers)
-    assert accept_resp.status_code == 201
+    assert accept_resp.status_code == 201, f"Falha no accept: {accept_resp.status_code} - {accept_resp.json()}"
     booking = accept_resp.json()
     assert booking["service_id"] == service_id
 
@@ -380,39 +414,5 @@ def test_dispatch_flow():
     assert my_bookings_resp.status_code == 200
     bookings = my_bookings_resp.json()
     assert any(b["id"] == booking["id"] for b in bookings)
-        
-    # 2. Create the first booking
-    booking_payload = {
-        "barbershop_id": barber_shop_id,
-        "service_id": service_id,
-        "date": date_str,
-        "time_slot": slot_str,
-        "notes": "Primeiro agendamento."
-    }
-    create_resp1 = client.post("/api/v1/bookings", headers=client_headers, json=booking_payload)
-    assert create_resp1.status_code == 201
-    booking1_id = create_resp1.json()["id"]
-    
-    # 3. Check busy slots
-    busy_resp = client.get(
-        f"/api/v1/bookings/busy-slots?barbershop_id={barber_shop_id}&date={date_str}",
-        headers=client_headers
-    )
-    assert busy_resp.status_code == 200
-    busy_slots = busy_resp.json()
-    assert slot_str in busy_slots
-    
-    # 4. Try to create second booking on the same slot
-    create_resp2 = client.post("/api/v1/bookings", headers=client_headers, json=booking_payload)
-    assert create_resp2.status_code == 409
-    assert create_resp2.json()["detail"] == "Horário já está ocupado"
-    
-    # Clean up
-    db = next(get_db())
-    try:
-        db.query(Booking).filter(Booking.id == booking1_id).delete()
-        db.commit()
-    finally:
-        db.close()
 
 

@@ -1,3 +1,7 @@
+---
+description: mobile.md
+---
+
 # Workflow — Mobile (Expo + TypeScript)
 
 Descrição

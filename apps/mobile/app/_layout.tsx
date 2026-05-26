@@ -7,6 +7,7 @@ import { Colors } from "../src/theme";
 import { Alert } from "react-native";
 import { useAlertStore } from "../src/store/alert";
 import CustomAlertModal from "../src/components/CustomAlertModal";
+import { useWebSocket, addWebSocketListener } from "../src/hooks/useWebSocket";
 
 // Override global de Alert.alert para usar o nosso modal premium customizado em todas as plataformas
 Alert.alert = (title: string, message?: string, buttons?: any[]) => {
@@ -21,8 +22,47 @@ export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
 
+  // Inicializa o WebSocket globalmente (escuta automaticamente quando autenticado)
+  useWebSocket();
+
   useEffect(() => {
     initialize();
+  }, []);
+
+  // Ouvinte global para mensagens em tempo real do WebSocket
+  useEffect(() => {
+    const removeListener = addWebSocketListener((data) => {
+      if (data.type === "new_booking_request") {
+        Alert.alert(
+          "💈 Novo Pedido!",
+          `Recebeste um novo pedido para "${data.request.service_name}" do cliente "${data.request.client_name}" nas proximidades.\nFaturamento: ${data.request.price.toLocaleString('pt-AO')} Kz`,
+          [
+            {
+              text: "Ver Pedido",
+              onPress: () => router.push("/(barber)/requests"),
+            },
+            {
+              text: "Ignorar",
+              style: "cancel",
+            },
+          ]
+        );
+      } else if (data.type === "booking_request_accepted") {
+        Alert.alert(
+          "✅ Pedido Aceite!",
+          data.message || "O teu pedido foi aceite por um barbeiro!",
+          [{ text: "Excelente!" }]
+        );
+      } else if (data.type === "booking_request_expired") {
+        Alert.alert(
+          "⏳ Pedido Expirou",
+          data.message || "Nenhum barbeiro disponível nas proximidades. Tenta novamente mais tarde.",
+          [{ text: "Percebido" }]
+        );
+      }
+    });
+
+    return removeListener;
   }, []);
 
   useEffect(() => {

@@ -25,7 +25,7 @@ def upgrade() -> None:
 
     # create bookingrequeststatus enum and table
     booking_status_enum = sa.Enum('requested', 'matching', 'assigned', 'expired', 'cancelled', name='bookingrequeststatus')
-    booking_status_enum.create(op.get_bind(), checkfirst=True)
+    # booking_status_enum.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
         'booking_requests',

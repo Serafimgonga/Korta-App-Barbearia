@@ -61,10 +61,33 @@ export const BookingService = {
     return response.data;
   },
 
-  listPendingRequests: async (lat: number, lng: number, radius_km = 10, service_id?: number) => {
-    const q = new URLSearchParams({ lat: String(lat), lng: String(lng), radius_km: String(radius_km) });
-    if (service_id) q.append('service_id', String(service_id));
+  listPendingRequests: async (latOrParams: number | { lat: number; lng: number; radius_km?: number; service_id?: number }, lng?: number, radius_km = 10, service_id?: number) => {
+    let latitude: number;
+    let longitude: number;
+    let radius = radius_km;
+    let svcId = service_id;
+    if (typeof latOrParams === 'object') {
+      latitude = latOrParams.lat;
+      longitude = latOrParams.lng;
+      radius = latOrParams.radius_km ?? 10;
+      svcId = latOrParams.service_id;
+    } else {
+      latitude = latOrParams;
+      longitude = lng as number;
+    }
+    const q = new URLSearchParams({ lat: String(latitude), lng: String(longitude), radius_km: String(radius) });
+    if (svcId) q.append('service_id', String(svcId));
     const response = await api.get(`/bookings/requests/pending?${q.toString()}`);
+    return response.data;
+  },
+
+  cancelRequest: async (requestId: number) => {
+    const response = await api.post(`/bookings/requests/${requestId}/cancel`);
+    return response.data;
+  },
+
+  acceptRequest: async (requestId: number) => {
+    const response = await api.post(`/bookings/requests/${requestId}/accept`);
     return response.data;
   }
 };

@@ -7,6 +7,7 @@ interface User {
   name: string;
   email: string;
   role: 'client' | 'barber' | 'admin';
+  is_online?: boolean;
 }
 
 interface AuthState {
