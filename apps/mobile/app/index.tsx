@@ -105,7 +105,7 @@ export default function WelcomeScreen() {
             <TouchableOpacity 
               style={[styles.button, Shadows.gold]}
               activeOpacity={0.85}
-              onPress={() => router.push('/(auth)/login')}
+              onPress={() => router.push('/onboarding/profile')}
             >
               <Text style={styles.buttonText}>Começar</Text>
             </TouchableOpacity>
