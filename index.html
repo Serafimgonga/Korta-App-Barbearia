@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KORTA - Barbeiro Sob Demanda em Angola</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#D4AF37',
+            dark: '#0D0D0D',
+            surface: '#1A1A1A',
+          },
+          fontFamily: { sans: ['Inter', 'system-ui'] },
+        },
+      },
+    };
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+    * { font-family: 'Inter', system-ui; }
+    .gradient-gold { background: linear-gradient(135deg, #D4AF37 0%, #F5D547 100%); }
+    .gradient-dark { background: linear-gradient(135deg, #0D0D0D 0%, #1A1A1A 100%); }
+    .hero-blur { backdrop-filter: blur(10px); }
+    .float-animation { animation: float 6s ease-in-out infinite; }
+    @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+  </style>
+</head>
+<body class="bg-dark text-white">
+  <!-- Navigation -->
+  <nav class="fixed top-0 w-full z-50 bg-dark bg-opacity-95 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="text-2xl font-black text-primary">KORTA</div>
+        <div class="hidden md:flex gap-8">
+          <a href="#features" class="hover:text-primary transition">Recursos</a>
+          <a href="#download" class="hover:text-primary transition">Download</a>
+          <a href="#contact" class="hover:text-primary transition">Contacto</a>
+        </div>
+        <button class="gradient-gold text-dark px-6 py-2 rounded-lg font-bold hover:shadow-lg transition">
+          Demo
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="pt-24 pb-20 px-4">
+    <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+      <div class="space-y-8">
+        <div class="space-y-4">
+          <h1 class="text-5xl md:text-6xl font-black leading-tight">
+            Barbeiro Sob <span class="text-primary">Demanda</span> em Angola
+          </h1>
+          <p class="text-xl text-gray-400">
+            A primeira plataforma de barbeiros on-demand em Luanda. Corte profissional, agende com 1 clique, pague de forma segura.
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-4">
+          <button class="gradient-gold text-dark px-8 py-4 rounded-lg font-bold text-lg hover:shadow-lg transition transform hover:scale-105">
+            Transferir App
+          </button>
+          <button class="border-2 border-primary text-primary px-8 py-4 rounded-lg font-bold text-lg hover:bg-primary hover:text-dark transition">
+            Ver Demo
+          </button>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <p class="text-3xl font-black text-primary">5min</p>
+            <p class="text-sm text-gray-400">Confirmação</p>
+          </div>
+          <div>
+            <p class="text-3xl font-black text-primary">50+</p>
+            <p class="text-sm text-gray-400">Barbeiros</p>
+          </div>
+          <div>
+            <p class="text-3xl font-black text-primary">4.8★</p>
+            <p class="text-sm text-gray-400">Avaliação</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative h-96">
+        <div class="absolute inset-0 gradient-gold opacity-10 rounded-3xl blur-3xl"></div>
+        <img src="https://images.unsplash.com/photo-1599531989844-c163814f8d13?w=400&q=80" alt="Barber" class="relative w-full h-full object-cover rounded-3xl" />
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="features" class="py-20 px-4 bg-surface">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-4xl font-black text-center mb-16">
+        Como Funciona? <span class="text-primary">3 Passos Simples</span>
+      </h2>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="p-8 rounded-2xl border border-gray-700 hover:border-primary transition">
+          <div class="text-5xl mb-4">📍</div>
+          <h3 class="text-2xl font-bold mb-3">1. Localiza</h3>
+          <p class="text-gray-400">
+            Define o teu local e procura barbeiros qualificados próximos de ti em tempo real.
+          </p>
+        </div>
+
+        <div class="p-8 rounded-2xl border border-gray-700 hover:border-primary transition">
+          <div class="text-5xl mb-4">✅</div>
+          <h3 class="text-2xl font-bold mb-3">2. Agenda</h3>
+          <p class="text-gray-400">
+            Escolhe o serviço desejado e confirma o agendamento em segundos. Sem tempo de espera.
+          </p>
+        </div>
+
+        <div class="p-8 rounded-2xl border border-gray-700 hover:border-primary transition">
+          <div class="text-5xl mb-4">💳</div>
+          <h3 class="text-2xl font-bold mb-3">3. Paga Seguro</h3>
+          <p class="text-gray-400">
+            Dinheiro, Mobile Money ou Carteira KORTA. Tudo protegido e rastreável.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Showcase -->
+  <section class="py-20 px-4">
+    <div class="max-w-6xl mx-auto space-y-16">
+      <!-- Feature 1 -->
+      <div class="grid md:grid-cols-2 gap-12 items-center">
+        <img src="https://images.unsplash.com/photo-1552881760-6cffed8c41f7?w=400&q=80" alt="Live Tracking" class="rounded-3xl" />
+        <div class="space-y-4">
+          <h3 class="text-3xl font-black">🗺️ Rastreamento em Tempo Real</h3>
+          <p class="text-gray-400 text-lg">
+            Vê exatamente onde está o teu barbeiro. Sabe quando sai e quando chega. Nunca mais "ele está a 10 minutos".
+          </p>
+          <ul class="space-y-2">
+            <li class="flex items-center gap-3">
+              <span class="text-primary font-bold">✓</span>
+              <span>GPS ao vivo do barbeiro</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <span class="text-primary font-bold">✓</span>
+              <span>Notificações push automáticas</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <span class="text-primary font-bold">✓</span>
+              <span>Contacto direto via chat</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="grid md:grid-cols-2 gap-12 items-center md:grid-flow-dense">
+        <div class="space-y-4 md:col-start-1">
+          <h3 class="text-3xl font-black">💰 Múltiplas Formas de Pagamento</h3>
+          <p class="text-gray-400 text-lg">
+            Paga da maneira que preferir. Suportamos dinheiro, Mobile Money e em breve Carteira KORTA.
+          </p>
+          <ul class="space-y-2">
+            <li class="flex items-center gap-3">
+              <span class="text-primary font-bold">✓</span>
+              <span>Dinheiro à chegada (seguro para ambos)</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <span class="text-primary font-bold">✓</span>
+              <span>Mobile Money (MEO, Unitel, Africell)</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <span class="text-primary font-bold">✓</span>
+              <span>Sem comissão escondida</span>
+            </li>
+          </ul>
+        </div>
+        <img src="https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&q=80" alt="Payment" class="rounded-3xl md:col-start-2" />
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="grid md:grid-cols-2 gap-12 items-center">
+        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a775?w=400&q=80" alt="Ratings" class="rounded-3xl" />
+        <div class="space-y-4">
+          <h3 class="text-3xl font-black">⭐ Barbeiros Verificados e Classificados</h3>
+          <p class="text-gray-400 text-lg">
+            Todos os barbeiros passam por verificação. Vê as avaliações reais de outros clientes antes de confirmar.
+          </p>
+          <ul class="space-y-2">
+            <li class="flex items-center gap-3">
+              <span class="text-primary font-bold">✓</span>
+              <span>Verificação de identidade obrigatória</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <span class="text-primary font-bold">✓</span>
+              <span>Sistema de avaliação 5-stars</span>
+            </li>
+            <li class="flex items-center gap-3">
+              <span class="text-primary font-bold">✓</span>
+              <span>Histórico de trabalhos</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="py-20 px-4 bg-surface">
+    <div class="max-w-4xl mx-auto text-center space-y-8">
+      <h2 class="text-4xl md:text-5xl font-black">
+        Pronto a Revolucionar os <span class="text-primary">Serviços de Barbeiro?</span>
+      </h2>
+      <p class="text-xl text-gray-400">
+        Transfere a app KORTA agora e ganha crédito de 5.000 Kz para o teu primeiro corte.
+      </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-4">
+        <button class="gradient-gold text-dark px-8 py-4 rounded-lg font-bold text-lg hover:shadow-lg transition transform hover:scale-105">
+          Download iOS
+        </button>
+        <button class="gradient-gold text-dark px-8 py-4 rounded-lg font-bold text-lg hover:shadow-lg transition transform hover:scale-105">
+          Download Android
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="py-20 px-4">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid md:grid-cols-4 gap-8">
+        <div class="text-center">
+          <p class="text-4xl font-black text-primary mb-2">10k+</p>
+          <p class="text-gray-400">Utilizadores</p>
+        </div>
+        <div class="text-center">
+          <p class="text-4xl font-black text-primary mb-2">50+</p>
+          <p class="text-gray-400">Barbeiros</p>
+        </div>
+        <div class="text-center">
+          <p class="text-4xl font-black text-primary mb-2">50k+</p>
+          <p class="text-gray-400">Cortes Realizados</p>
+        </div>
+        <div class="text-center">
+          <p class="text-4xl font-black text-primary mb-2">4.8★</p>
+          <p class="text-gray-400">Classificação Média</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-gray-800 py-12 px-4">
+    <div class="max-w-6xl mx-auto grid md:grid-cols-4 gap-8 mb-8">
+      <div>
+        <p class="text-xl font-black text-primary mb-4">KORTA</p>
+        <p class="text-gray-400 text-sm">Barbeiro sob demanda em Angola.</p>
+      </div>
+      <div>
+        <h4 class="font-bold mb-4">Produto</h4>
+        <ul class="space-y-2 text-gray-400 text-sm">
+          <li><a href="#" class="hover:text-primary">Features</a></li>
+          <li><a href="#" class="hover:text-primary">Download</a></li>
+          <li><a href="#" class="hover:text-primary">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-bold mb-4">Legal</h4>
+        <ul class="space-y-2 text-gray-400 text-sm">
+          <li><a href="#" class="hover:text-primary">Termos</a></li>
+          <li><a href="#" class="hover:text-primary">Privacidade</a></li>
+          <li><a href="#" class="hover:text-primary">Cookies</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-bold mb-4">Social</h4>
+        <ul class="space-y-2 text-gray-400 text-sm">
+          <li><a href="#" class="hover:text-primary">Instagram</a></li>
+          <li><a href="#" class="hover:text-primary">Facebook</a></li>
+          <li><a href="#" class="hover:text-primary">LinkedIn</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
+      <p>&copy; 2026 KORTA. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+</body>
+</html>
