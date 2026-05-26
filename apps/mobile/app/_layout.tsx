@@ -73,8 +73,8 @@ export default function RootLayout() {
     const inBarberGroup = segments[0] === "(barber)";
 
     if (!isAuthenticated) {
-      // Se não autenticado e nas rotas logadas, força redirecionamento para welcome
-      if (inTabsGroup || inBarberGroup) {
+      // Se não autenticado, apenas a área do barbeiro é bloqueada imediatamente
+      if (inBarberGroup) {
         router.replace("/");
       }
     } else if (isAuthenticated && user) {

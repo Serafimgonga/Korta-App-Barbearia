@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, ScrollView,
   RefreshControl, ActivityIndicator, TouchableOpacity,
-  Dimensions, Animated, Platform
+  Dimensions, Animated, Platform, Alert
 } from 'react-native';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
+import { useAuthStore } from '../../src/store/auth';
 import { BarbershopService } from '../../src/services/barbershops';
 import {
   BarbershopCard, CompactBarbershopCard, FeaturedCutCard
@@ -100,6 +101,19 @@ export default function HomeScreen() {
   }, []);
 
   const handleQuickRequest = () => {
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    if (!isAuthenticated) {
+      Alert.alert(
+        "💈 Entra na tua Conta!",
+        "Para solicitares um barbeiro sob demanda agora, precisas de ter sessão iniciada. Queres fazer login ou registar?",
+        [
+          { text: "Entrar / Registar", onPress: () => router.push('/(auth)/login') },
+          { text: "Continuar a navegar", style: "cancel" }
+        ]
+      );
+      return;
+    }
+
     router.push({
       pathname: '/booking/searching',
       params: {

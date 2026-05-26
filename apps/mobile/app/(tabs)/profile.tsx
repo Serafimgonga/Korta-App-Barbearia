@@ -17,13 +17,35 @@ import { StatusBar } from 'expo-status-bar';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { isAuthenticated, user, logout } = useAuthStore();
 
   const handleLogout = async () => {
     useBarberStore.getState().reset();
     await logout();
     router.replace('/');
   };
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.guestContainer}>
+          <UserIcon size={72} color="#f59e0b" strokeWidth={1.5} style={{ marginBottom: 16 }} />
+          <Text style={styles.guestTitle}>Cria o teu Perfil KORTA</Text>
+          <Text style={styles.guestSubtitle}>
+            Faz login ou regista-te para salvares as tuas preferências, teres acesso ao histórico de cortes e falares com os barbeiros.
+          </Text>
+          <TouchableOpacity
+            style={styles.guestButton}
+            activeOpacity={0.85}
+            onPress={() => router.push('/(auth)/login')}
+          >
+            <Text style={styles.guestButtonText}>Entrar na minha Conta</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -264,5 +286,41 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.mutedForeground,
     letterSpacing: 0.5,
+  },
+  guestContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xxl,
+    backgroundColor: Colors.background,
+  },
+  guestTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FAFAFA',
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
+  },
+  guestSubtitle: {
+    fontSize: 14,
+    color: '#a1a1aa',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Spacing.xxl,
+    paddingHorizontal: Spacing.md,
+  },
+  guestButton: {
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: Spacing.xl + 4,
+    height: 52,
+    borderRadius: Radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.gold,
+  },
+  guestButtonText: {
+    color: '#000000',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

@@ -6,19 +6,44 @@ import {
   FlatList, 
   ActivityIndicator, 
   RefreshControl,
-  Image 
+  Image,
+  TouchableOpacity
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store/auth';
 import { Calendar as CalendarIcon, Clock, Scissors, AlertCircle, MapPin } from 'lucide-react-native';
 import { BookingService } from '../../src/services/bookings';
 
 export default function BookingsScreen() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
+
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['my-bookings'],
     queryFn: () => BookingService.myBookings(),
+    enabled: isAuthenticated,
   });
+
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.guestContainer}>
+        <CalendarIcon size={64} color="#f59e0b" style={{ marginBottom: 16 }} />
+        <Text style={styles.guestTitle}>Vê as tuas Marcações</Text>
+        <Text style={styles.guestSubtitle}>
+          Faz login ou cria uma conta para poderes agendar cortes de cabelo e acompanhar as tuas marcações em tempo real.
+        </Text>
+        <TouchableOpacity
+          style={styles.guestButton}
+          activeOpacity={0.85}
+          onPress={() => router.push('/(auth)/login')}
+        >
+          <Text style={styles.guestButtonText}>Entrar / Registar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -192,5 +217,41 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999,
+  },
+  guestContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xxl,
+    backgroundColor: Colors.background,
+  },
+  guestTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FAFAFA',
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
+  },
+  guestSubtitle: {
+    fontSize: 14,
+    color: '#a1a1aa',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Spacing.xxl,
+    paddingHorizontal: Spacing.md,
+  },
+  guestButton: {
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: Spacing.xl + 4,
+    height: 52,
+    borderRadius: Radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.gold,
+  },
+  guestButtonText: {
+    color: '#000000',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

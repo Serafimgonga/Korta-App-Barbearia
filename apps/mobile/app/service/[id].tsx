@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Colors, Spacing, Radius } from '../../src/theme';
 import { ServicesService } from '../../src/services/services';
 import { BarbershopService } from '../../src/services/barbershops';
+import { useAuthStore } from '../../src/store/auth';
 import { ArrowLeft, Star, Clock, Camera, ChevronRight, MessageSquare, Plus } from 'lucide-react-native';
 
 export default function ServiceDetails() {
@@ -78,6 +79,20 @@ export default function ServiceDetails() {
 
   const handleBookNow = () => {
     if (!service) return;
+
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    if (!isAuthenticated) {
+      Alert.alert(
+        "💈 Entra na tua Conta!",
+        "Para agendares este serviço, precisas de ter sessão iniciada. Queres fazer login ou registar?",
+        [
+          { text: "Entrar / Registar", onPress: () => router.push('/(auth)/login') },
+          { text: "Continuar a navegar", style: "cancel" }
+        ]
+      );
+      return;
+    }
+
     router.push({
       pathname: '/booking/create',
       params: {

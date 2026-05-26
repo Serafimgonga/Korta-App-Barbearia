@@ -6,6 +6,7 @@ import { MapPin, Navigation } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
+import { useAuthStore } from '../../src/store/auth';
 
 export default function LocationPermission() {
   const router = useRouter();
@@ -64,11 +65,15 @@ export default function LocationPermission() {
       }
 
       // Redireciona o usuário dependendo do perfil escolhido
+      const isAuthenticated = useAuthStore.getState().isAuthenticated;
       if (userType === 'barber') {
-        // Barbeiro vai para o dashboard ou login
-        router.replace('/(barber)/dashboard');
+        if (isAuthenticated) {
+          router.replace('/(barber)/dashboard');
+        } else {
+          router.replace('/(auth)/login');
+        }
       } else {
-        // Cliente vai para o painel principal
+        // Cliente vai para o painel principal como convidado
         router.replace('/(tabs)');
       }
     } catch (e) {
