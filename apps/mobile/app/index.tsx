@@ -12,8 +12,11 @@ export default function WelcomeScreen() {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const moveAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Animação de entrada
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -26,7 +29,52 @@ export default function WelcomeScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Loop de movimento e simulação de corte de tesoura
+    Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(moveAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotateAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(moveAnim, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotateAnim, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    ).start();
   }, []);
+
+  const translateX = moveAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-18, 18], // Desloca horizontalmente
+  });
+
+  const translateY = moveAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, -10, 0], // Efeito flutuação/pulo
+  });
+
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: ['-15deg', '15deg', '-15deg'], // Efeito rotação/tesoura
+  });
 
   return (
     <LinearGradient 
@@ -41,10 +89,12 @@ export default function WelcomeScreen() {
             styles.logoContainer, 
             { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
           ]}>
-            {/* Ícone Tesoura com Efeito Blur Glow */}
+            {/* Ícone Tesoura com Efeito Blur Glow e Animação de Deslocamento/Corte */}
             <View style={styles.glowOuterCircle}>
               <View style={styles.glowInnerCircle}>
-                <Scissors size={72} color="#f59e0b" strokeWidth={1.5} />
+                <Animated.View style={{ transform: [{ translateX }, { translateY }, { rotate }] }}>
+                  <Scissors size={72} color="#f59e0b" strokeWidth={1.5} />
+                </Animated.View>
               </View>
             </View>
 
