@@ -1,42 +1,80 @@
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '../src/theme';
 import { Scissors } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  console.log("📱 [KORTA] Ecrã de Boas-Vindas carregado com sucesso!");
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
-      <View style={styles.content}>
-        <View style={styles.logoContainer}>
-          <Scissors size={80} color={Colors.primary} strokeWidth={1} />
-          <Text style={styles.title}>KORTA</Text>
-          <Text style={styles.subtitle}>URBAN PREMIUM GROOMING</Text>
-        </View>
+  console.log("📱 [KORTA] Ecrã de Boas-Vindas animado carregado!");
 
-        <View style={styles.footer}>
-          <TouchableOpacity 
-            style={[styles.button, Shadows.gold]}
-            activeOpacity={0.8}
-            onPress={() => router.push('/(auth)/login')}
-          >
-            <Text style={styles.buttonText}>Começar Agora</Text>
-          </TouchableOpacity>
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <LinearGradient 
+      colors={['#000000', '#18181b']} 
+      style={styles.gradient}
+    >
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.content}>
           
-          <Text style={styles.version}>v1.0.0 — Ícolo e Bengo, Angola 🇦🇴</Text>
+          <Animated.View style={[
+            styles.logoContainer, 
+            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+          ]}>
+            {/* Ícone Tesoura com Efeito Blur Glow */}
+            <View style={styles.glowOuterCircle}>
+              <View style={styles.glowInnerCircle}>
+                <Scissors size={72} color="#f59e0b" strokeWidth={1.5} />
+              </View>
+            </View>
+
+            <Text style={styles.title}>KORTA</Text>
+            <Text style={styles.subtitle}>Encontra um barbeiro perto de ti em minutos</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
+            <TouchableOpacity 
+              style={[styles.button, Shadows.gold]}
+              activeOpacity={0.85}
+              onPress={() => router.push('/(auth)/login')}
+            >
+              <Text style={styles.buttonText}>Começar</Text>
+            </TouchableOpacity>
+            
+            <Text style={styles.version}>v1.0.0 — Luanda, Angola 🇦🇴</Text>
+          </Animated.View>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   content: {
     flex: 1,
@@ -48,21 +86,55 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
+  },
+  glowOuterCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(245, 158, 11, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.12)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#f59e0b',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.4,
+        shadowRadius: 25,
+      },
+      android: {
+        elevation: 6,
+      }
+    }),
+  },
+  glowInnerCircle: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.25)',
   },
   title: {
-    fontSize: 56,
+    fontSize: 52,
     fontWeight: '900',
-    color: Colors.primary,
-    letterSpacing: 8,
-    marginTop: Spacing.md,
+    color: '#f59e0b',
+    letterSpacing: 6,
+    marginTop: Spacing.lg,
     fontFamily: Platform.OS === 'ios' ? 'Sora' : 'sans-serif',
   },
   subtitle: {
-    fontSize: 12,
-    color: Colors.mutedForeground,
-    marginTop: Spacing.xs,
-    letterSpacing: 4,
-    fontWeight: '600',
+    fontSize: 14,
+    color: '#a1a1aa', // Zinc-400
+    marginTop: Spacing.md,
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: Spacing.lg,
+    fontWeight: '500',
   },
   footer: {
     width: '100%',
@@ -70,22 +142,22 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
   },
   button: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#f59e0b',
     width: '100%',
-    height: 64,
+    height: 60,
     borderRadius: Radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   buttonText: {
-    color: Colors.primaryForeground,
+    color: '#000000',
     fontSize: 18,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   version: {
     marginTop: Spacing.xl,
-    color: Colors.mutedForeground,
+    color: '#71717a', // Zinc-500
     fontSize: 11,
     letterSpacing: 1,
   }

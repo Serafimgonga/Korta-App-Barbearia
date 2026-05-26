@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, ScrollView,
   RefreshControl, ActivityIndicator, TouchableOpacity,
-  Dimensions, Animated
+  Dimensions, Animated, Platform
 } from 'react-native';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
@@ -52,6 +52,38 @@ const FadeInView = ({ delay = 0, children, style }: any) => {
   );
 };
 
+const QuickRequestCTA = ({ onPress }: { onPress: () => void }) => {
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity 
+        style={styles.ctaButton} 
+        activeOpacity={0.85}
+        onPress={onPress}
+      >
+        <Text style={styles.ctaButtonText}>Pedir corte agora</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const [search, setSearch] = useState('');
@@ -66,6 +98,18 @@ export default function HomeScreen() {
       setLocation(currentLocation);
     })();
   }, []);
+
+  const handleQuickRequest = () => {
+    router.push({
+      pathname: '/booking/searching',
+      params: {
+        serviceId: '1',
+        lat: String(location?.coords.latitude || -8.8368),
+        lng: String(location?.coords.longitude || 13.2332),
+        serviceName: 'Corte Premium'
+      }
+    });
+  };
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ['barbershops', search, activeCategory, location?.coords.latitude],
@@ -92,19 +136,21 @@ export default function HomeScreen() {
 
   const renderHeader = () => (
     <View>
-      {/* Saudação */}
+      {/* Header com Logo Grande e Localização */}
       <FadeInView delay={100}>
-        <View style={styles.greeting}>
-          <View>
-            <Text style={styles.greetingTitle}>Descobre o teu</Text>
-            <Text style={styles.greetingHighlight}>estilo perfeito ✂️</Text>
-          </View>
-          <View style={styles.locationPill}>
-            <MapPin size={12} color={location ? Colors.success : Colors.mutedForeground} />
-            <Text style={styles.locationText}>{location ? 'Perto de ti' : 'Angola 🇦🇴'}</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.largeLogo}>KORTA</Text>
+          <View style={styles.locationContainer}>
+            <MapPin size={14} color="#f59e0b" />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {location ? 'Luanda, Angola 📍' : 'Angola 🇦🇴'}
+            </Text>
           </View>
         </View>
       </FadeInView>
+
+      {/* CTA Principal */}
+      <QuickRequestCTA onPress={handleQuickRequest} />
 
       {/* Pesquisa */}
       <FadeInView delay={200}>
@@ -244,19 +290,61 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
 
-  greeting: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'flex-start', marginBottom: Spacing.md,
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    marginTop: Spacing.xs,
   },
-  greetingTitle: { fontSize: 16, color: Colors.mutedForeground, fontWeight: '500' },
-  greetingHighlight: { fontSize: 28, fontWeight: '900', color: Colors.foreground, letterSpacing: -0.5 },
-  locationPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: Colors.surface, borderRadius: Radius.full,
-    paddingHorizontal: Spacing.sm + 4, paddingVertical: 6,
-    borderWidth: 1, borderColor: Colors.border,
+  largeLogo: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#f59e0b', // Amber-500
+    letterSpacing: 2,
+    fontFamily: Platform.OS === 'ios' ? 'Sora' : 'sans-serif',
   },
-  locationText: { fontSize: 12, fontWeight: '600', color: Colors.foreground },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.sm + 4,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  locationText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.mutedForeground,
+  },
+  ctaButton: {
+    backgroundColor: '#f59e0b', // Amber-500
+    borderRadius: Radius.lg,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.lg,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#f59e0b',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 8,
+      }
+    }),
+  },
+  ctaButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
 
   searchContainer: {
     flexDirection: 'row', alignItems: 'center',
