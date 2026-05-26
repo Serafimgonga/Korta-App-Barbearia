@@ -100,9 +100,8 @@ export default function WelcomeScreen() {
 
             <Text style={styles.title}>KORTA</Text>
             <Text style={styles.subtitle}>Encontra um barbeiro perto de ti em minutos</Text>
-          </Animated.View>
 
-          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
+            {/* Botão Começar perto da informação */}
             <TouchableOpacity 
               style={[styles.button, Shadows.gold]}
               activeOpacity={0.85}
@@ -110,7 +109,9 @@ export default function WelcomeScreen() {
             >
               <Text style={styles.buttonText}>Começar</Text>
             </TouchableOpacity>
-            
+          </Animated.View>
+
+          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
             <Text style={styles.version}>v1.0.0 — Luanda, Angola 🇦🇴</Text>
           </Animated.View>
         </View>
@@ -193,11 +194,13 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#f59e0b',
-    width: '100%',
-    height: 60,
-    borderRadius: Radius.lg,
+    paddingHorizontal: 48,
+    minWidth: 180,
+    height: 56,
+    borderRadius: Radius.full,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 28,
   },
   buttonText: {
     color: '#000000',
