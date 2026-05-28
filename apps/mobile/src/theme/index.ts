@@ -1,33 +1,33 @@
 export const Colors = {
-  // KORTA — Urban Premium Tech (Baseado na paleta enviada)
-  background: '#0D0D0D', // Deep Black
-  foreground: '#FAFAFA', // Near White
-  surface: '#1C1C1C',    // Card/Surface
-  surface2: '#242424',
+  // KORTA — Urban Premium Tech (Paleta de Cores do Utilizador)
+  background: '#000000', // Preto puro
+  foreground: '#FFFFFF', // Branco
+  surface: '#18181B',    // Zinc-900
+  surface2: '#27272A',   // Zinc-800
   
-  primary: '#D4AF37',    // Gold
-  primaryGlow: '#E5C158',
-  primaryForeground: '#0D0D0D',
+  primary: '#f59e0b',    // Âmbar
+  primaryGlow: '#fbbf24', // Âmbar Glow
+  primaryForeground: '#000000', // Preto
   
-  secondary: '#242424',
-  secondaryForeground: '#FAFAFA',
+  secondary: '#27272A',  // Zinc-800
+  secondaryForeground: '#FFFFFF',
   
-  muted: '#242424',
-  mutedForeground: '#B3B3B3',
+  muted: '#27272A',
+  mutedForeground: '#a1a1aa', // Zinc-400
   
-  accent: 'rgba(212, 175, 55, 0.15)', // Gold transparente
-  accentForeground: '#E5C158',
+  accent: 'rgba(245, 158, 11, 0.15)', // Âmbar transparente
+  accentForeground: '#fbbf24',
   
   success: '#34D399',
   error: '#EF4444',
-  warning: '#F59E0B',
+  warning: '#f59e0b',
   
-  border: 'rgba(255, 255, 255, 0.1)',
-  input: 'rgba(255, 255, 255, 0.12)',
+  border: '#27272A',     // Zinc-800
+  input: 'rgba(39, 39, 42, 0.8)',
   
   // Gradients (representação em string para uso em componentes)
-  gradientGold: ['#D4AF37', '#E5C158'],
-  gradientDark: ['#0D0D0D', '#1A1A1A'],
+  gradientGold: ['#f59e0b', '#fbbf24'],
+  gradientDark: ['#000000', '#18181b'],
 };
 
 export const Spacing = {
@@ -49,7 +49,7 @@ export const Radius = {
 
 export const Shadows = {
   gold: {
-    shadowColor: '#D4AF37',
+    shadowColor: '#f59e0b',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.4,
     shadowRadius: 30,

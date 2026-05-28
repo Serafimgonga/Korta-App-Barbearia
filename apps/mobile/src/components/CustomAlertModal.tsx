@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -8,14 +8,41 @@ import {
   TouchableWithoutFeedback,
   Dimensions,
   Platform,
+  Animated,
 } from 'react-native';
 import { useAlertStore } from '../store/alert';
-import { Colors, Radius, Spacing } from '../theme';
+import { Radius, Spacing } from '../theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
 export default function CustomAlertModal() {
   const { visible, title, message, buttons, hideAlert } = useAlertStore();
+
+  // Animations
+  const scaleAnim = useRef(new Animated.Value(0.85)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 8,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      scaleAnim.setValue(0.85);
+      opacityAnim.setValue(0);
+    }
+  }, [visible]);
 
   if (!visible) return null;
 
@@ -44,47 +71,66 @@ export default function CustomAlertModal() {
       <TouchableWithoutFeedback onPress={hideAlert}>
         <View style={styles.backdrop}>
           <TouchableWithoutFeedback>
-            <View style={styles.alertCard}>
-              {/* Header / Title */}
-              <Text style={styles.title}>{title}</Text>
+            <Animated.View style={[
+              styles.cardWrapper,
+              {
+                opacity: opacityAnim,
+                transform: [{ scale: scaleAnim }],
+              }
+            ]}>
+              {/* Amber glow line on top */}
+              <View style={styles.glowLine} />
 
-              {/* Message */}
-              {!!message && <Text style={styles.message}>{message}</Text>}
+              <View style={styles.alertCard}>
+                {/* Header / Title */}
+                <Text style={styles.title}>{title}</Text>
 
-              {/* Action Buttons */}
-              <View style={[
-                styles.buttonContainer,
-                activeButtons.length > 2 ? styles.buttonContainerVertical : styles.buttonContainerHorizontal
-              ]}>
-                {activeButtons.map((btn, index) => {
-                  const isCancel = btn.style === 'cancel' || btn.text.toLowerCase() === 'cancelar';
-                  const isDestructive = btn.style === 'destructive' || btn.text.toLowerCase() === 'recusar' || btn.text.toLowerCase() === 'eliminar';
-                  
-                  return (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.button,
-                        activeButtons.length > 2 ? styles.buttonFullWidth : styles.buttonHalfWidth,
-                        isCancel && styles.buttonCancel,
-                        isDestructive && styles.buttonDestructive,
-                        !isCancel && !isDestructive && styles.buttonPrimary
-                      ]}
-                      onPress={() => handleButtonPress(btn.onPress)}
-                    >
-                      <Text style={[
-                        styles.buttonText,
-                        isCancel && styles.buttonTextCancel,
-                        isDestructive && styles.buttonTextDestructive,
-                        !isCancel && !isDestructive && styles.buttonTextPrimary
-                      ]}>
-                        {btn.text}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                {/* Thin divider */}
+                <View style={styles.divider} />
+
+                {/* Message */}
+                {!!message && <Text style={styles.message}>{message}</Text>}
+
+                {/* Action Buttons */}
+                <View style={[
+                  styles.buttonContainer,
+                  // Stack vertically if more than 2 buttons OR any button text is long
+                  (activeButtons.length > 2 || activeButtons.some(b => b.text.length > 12))
+                    ? styles.buttonContainerVertical
+                    : styles.buttonContainerHorizontal
+                ]}>
+                  {activeButtons.map((btn, index) => {
+                    const isCancel = btn.style === 'cancel' || btn.text.toLowerCase() === 'cancelar' || btn.text.toLowerCase().includes('navegar') || btn.text.toLowerCase().includes('ignorar') || btn.text.toLowerCase().includes('percebido');
+                    const isDestructive = btn.style === 'destructive' || btn.text.toLowerCase() === 'recusar' || btn.text.toLowerCase() === 'eliminar';
+                    const useVertical = activeButtons.length > 2 || activeButtons.some(b => b.text.length > 12);
+                    
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.button,
+                          useVertical ? styles.buttonFullWidth : styles.buttonHalfWidth,
+                          isCancel && styles.buttonCancel,
+                          isDestructive && styles.buttonDestructive,
+                          !isCancel && !isDestructive && styles.buttonPrimary
+                        ]}
+                        activeOpacity={0.85}
+                        onPress={() => handleButtonPress(btn.onPress)}
+                      >
+                        <Text style={[
+                          styles.buttonText,
+                          isCancel && styles.buttonTextCancel,
+                          isDestructive && styles.buttonTextDestructive,
+                          !isCancel && !isDestructive && styles.buttonTextPrimary
+                        ]}>
+                          {btn.text}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
+            </Animated.View>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
@@ -95,43 +141,61 @@ export default function CustomAlertModal() {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)', // Deep backdrop dim
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.lg,
   },
-  alertCard: {
+  cardWrapper: {
     width: Platform.OS === 'web' ? Math.min(width * 0.9, 420) : '90%',
-    backgroundColor: Colors.surface, // '#1C1C1C'
-    borderRadius: Radius.lg, // 14px
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+  },
+  glowLine: {
+    height: 3,
+    backgroundColor: '#f59e0b',
+  },
+  alertCard: {
+    backgroundColor: '#18181B', // Zinc-900
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopWidth: 0,
+    borderColor: '#27272A', // Zinc-800
+    borderBottomLeftRadius: Radius.xl,
+    borderBottomRightRadius: Radius.xl,
     padding: Spacing.xl,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowColor: '#f59e0b',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 12,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
-    color: Colors.primary, // Gold
+    color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: Spacing.md,
-    letterSpacing: 0.5,
+    letterSpacing: -0.3,
+  },
+  divider: {
+    width: 40,
+    height: 2,
+    backgroundColor: '#f59e0b',
+    borderRadius: 1,
+    marginVertical: Spacing.md,
+    opacity: 0.6,
   },
   message: {
     fontSize: 14,
-    color: '#E5E5E5', // Soft near white message text
+    color: '#a1a1aa', // Zinc-400
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: Spacing.xl,
+    fontWeight: '500',
   },
   buttonContainer: {
     width: '100%',
-    gap: Spacing.md,
+    gap: Spacing.sm + 2,
   },
   buttonContainerHorizontal: {
     flexDirection: 'row',
@@ -141,8 +205,9 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   button: {
-    height: 48,
-    borderRadius: Radius.md,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.full,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -153,29 +218,30 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   buttonPrimary: {
-    backgroundColor: Colors.primary, // Gold
+    backgroundColor: '#f59e0b', // Amber
   },
   buttonCancel: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: '#27272A', // Zinc-800
+    borderWidth: 1.5,
+    borderColor: '#3f3f46', // Zinc-700
   },
   buttonDestructive: {
-    backgroundColor: Colors.error, // Red
+    backgroundColor: '#7f1d1d', // Red-900 tone
+    borderWidth: 1.5,
+    borderColor: '#ef4444',
   },
   buttonText: {
     fontSize: 14,
     fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    textAlign: 'center',
   },
   buttonTextPrimary: {
-    color: Colors.primaryForeground, // Deep Black
+    color: '#000000',
   },
   buttonTextCancel: {
-    color: Colors.mutedForeground,
+    color: '#a1a1aa', // Zinc-400
   },
   buttonTextDestructive: {
-    color: '#FFF',
+    color: '#fca5a5', // Red-300
   },
 });

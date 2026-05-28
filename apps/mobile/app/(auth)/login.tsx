@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -8,140 +8,238 @@ import {
   KeyboardAvoidingView, 
   Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  Animated,
+  SafeAreaView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { AuthService } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/auth';
-import { Mail, Lock, ArrowRight } from 'lucide-react-native';
+import { Mail, Lock, ArrowRight, ChevronLeft } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const { role } = params as any;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Animações de entrada
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 450,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 450,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   const handleLogin = async () => {
-    console.log(`🔑 [KORTA] Tentativa de login iniciada para o email: ${email}`);
-    if (!email || !password) {
-      console.warn('⚠️ [KORTA] Login abortado: campos obrigatórios em falta.');
-      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !password) {
+      Alert.alert('Campos em falta', 'Por favor, preencha todos os campos.');
       return;
     }
 
     setLoading(true);
     try {
-      console.log('📡 [KORTA] A chamar AuthService.login...');
-      await AuthService.login(email, password);
+      await AuthService.login(trimmedEmail, password);
       const user = useAuthStore.getState().user;
-      console.log('✅ [KORTA] Login bem-sucedido! Role:', user?.role);
       if (user?.role === 'barber') {
         router.replace('/(barber)/dashboard');
       } else {
         router.replace('/(tabs)');
       }
     } catch (error: any) {
-      console.error('❌ [KORTA] Erro ao fazer login:', {
-        message: error.message,
-        url: error.config?.url,
-        responseStatus: error.response?.status,
-        responseData: error.response?.data
-      });
       Alert.alert('Falha no Login', error.response?.data?.detail || 'Ocorreu um erro inesperado.');
     } finally {
       setLoading(false);
     }
   };
 
+  const canGoBack = router.canGoBack();
+
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+    <LinearGradient
+      colors={['#000000', '#18181b']}
+      style={styles.gradient}
     >
-      <View style={styles.content}>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="light" />
+
+        {/* Header com botão voltar */}
         <View style={styles.header}>
-          <Text style={styles.title}>Bem-vindo de volta</Text>
-          <Text style={styles.subtitle}>Faz login para continuares a marcar os teus cortes.</Text>
+          {canGoBack ? (
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <ChevronLeft size={24} color="#f59e0b" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.backButton} />
+          )}
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Mail size={20} color={Colors.mutedForeground} style={styles.inputIcon} />
-            <TextInput
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              style={styles.input}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholderTextColor={Colors.mutedForeground}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Lock size={20} color={Colors.mutedForeground} style={styles.inputIcon} />
-            <TextInput
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              style={styles.input}
-              secureTextEntry
-              placeholderTextColor={Colors.mutedForeground}
-            />
-          </View>
-
-          <TouchableOpacity 
-            style={styles.loginButton}
-            onPress={handleLogin}
-            disabled={loading}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.flex}
+        >
+          <Animated.View
+            style={[
+              styles.content,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+            ]}
           >
-            {loading ? (
-              <ActivityIndicator color={Colors.primaryForeground} />
-            ) : (
-              <>
-                <Text style={styles.loginButtonText}>Entrar</Text>
-                <ArrowRight size={20} color={Colors.primaryForeground} />
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
+            {/* Título */}
+            <View style={styles.titleSection}>
+              {/* Badge de role — só aparece quando vem do onboarding com role definido */}
+              {role ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {role === 'barber' ? '✂️  BARBEIRO' : '👤  CLIENTE'}
+                  </Text>
+                </View>
+              ) : null}
+              <Text style={styles.title}>Bem-vindo{'\n'}de volta</Text>
+              <Text style={styles.subtitle}>
+                {role === 'barber'
+                  ? 'Faz login para continuares a receber pedidos.'
+                  : role === 'client'
+                  ? 'Faz login para continuares a marcar os teus cortes.'
+                  : 'Faz login na tua conta KORTA.'}
+              </Text>
+            </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Não tens uma conta? </Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-            <Text style={styles.registerLink}>Cria uma aqui</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+            {/* Formulário */}
+            <View style={styles.form}>
+              <View style={styles.inputContainer}>
+                <Mail size={20} color="#71717a" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  style={styles.input}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  placeholderTextColor="#52525b"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Lock size={20} color="#71717a" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  style={styles.input}
+                  secureTextEntry
+                  placeholderTextColor="#52525b"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.loginButton, loading && styles.loginButtonDisabled, Shadows.gold]}
+                onPress={handleLogin}
+                disabled={loading}
+                activeOpacity={0.85}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#000000" />
+                ) : (
+                  <>
+                    <Text style={styles.loginButtonText}>Entrar</Text>
+                    <ArrowRight size={20} color="#000000" strokeWidth={2.5} />
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Não tens uma conta? </Text>
+              <TouchableOpacity onPress={() => router.push({ pathname: '/(auth)/register', params: { role } })}>
+                <Text style={styles.registerLink}>Cria uma aqui</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  gradient: {
     flex: 1,
-    backgroundColor: Colors.background,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  flex: {
+    flex: 1,
+  },
+  header: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.md,
+    backgroundColor: '#18181b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#27272a',
   },
   content: {
     flex: 1,
-    padding: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
     justifyContent: 'center',
+    gap: 32,
   },
-  header: {
-    marginBottom: Spacing.xxl,
+  titleSection: {
+    gap: 10,
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 5,
+    borderWidth: 0.5,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#f59e0b',
+    letterSpacing: 1.2,
   },
   title: {
-    fontSize: 34,
+    fontSize: 40,
     fontWeight: '900',
-    color: Colors.primary,
-    letterSpacing: 1,
+    color: '#FAFAFA',
+    letterSpacing: -0.5,
+    lineHeight: 46,
   },
   subtitle: {
-    fontSize: 16,
-    color: Colors.mutedForeground,
-    marginTop: Spacing.sm,
-    lineHeight: 24,
+    fontSize: 15,
+    color: '#a1a1aa',
+    lineHeight: 22,
+    fontWeight: '500',
   },
   form: {
     gap: Spacing.md,
@@ -149,10 +247,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: '#18181b',
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: '#27272a',
     paddingHorizontal: Spacing.md,
     height: 60,
   },
@@ -162,35 +260,38 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: Colors.foreground,
+    color: '#FAFAFA',
+    fontWeight: '500',
   },
   loginButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#f59e0b',
     height: 60,
-    borderRadius: Radius.md,
+    borderRadius: Radius.full,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: Spacing.md,
+    marginTop: Spacing.sm,
     gap: Spacing.sm,
-    ...Shadows.gold,
+  },
+  loginButtonDisabled: {
+    opacity: 0.5,
   },
   loginButtonText: {
-    color: Colors.primaryForeground,
+    color: '#000000',
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '900',
+    letterSpacing: 0.3,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: Spacing.xxl,
   },
   footerText: {
-    color: Colors.mutedForeground,
+    color: '#71717a',
     fontSize: 14,
   },
   registerLink: {
-    color: Colors.primary,
+    color: '#f59e0b',
     fontSize: 14,
     fontWeight: '700',
   },

@@ -15,6 +15,12 @@ class UserRole(str, enum.Enum):
     admin = "admin"
 
 
+class BarberType(str, enum.Enum):
+    salon_owner = "salon_owner"   # Tem barbearia física
+    freelancer  = "freelancer"    # Ambulante / ao domicílio
+    hybrid      = "hybrid"        # Ambos
+
+
 class BarberStatus(str, enum.Enum):
     open = "open"
     closed = "closed"
@@ -54,9 +60,41 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # relationships
-    barbershops = relationship("Barbershop", back_populates="owner")
-    bookings = relationship("Booking", back_populates="user", foreign_keys="Booking.user_id")
-    reviews = relationship("Review", back_populates="user")
+    barbershops   = relationship("Barbershop", back_populates="owner")
+    bookings      = relationship("Booking", back_populates="user", foreign_keys="Booking.user_id")
+    reviews       = relationship("Review", back_populates="user")
+    barber_profile = relationship("BarberProfile", back_populates="user", uselist=False)
+
+
+class BarberProfile(Base):
+    """Perfil profissional do barbeiro (independente de ter barbearia ou não)."""
+    __tablename__ = "barber_profiles"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    user_id     = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    barber_type = Column(Enum(BarberType), nullable=False, default=BarberType.freelancer)
+
+    # Dados do perfil ambulante / freelancer
+    coverage_radius_km  = Column(Float, default=5.0)
+    home_service_fee    = Column(Float, default=0.0)
+    specialties         = Column(Text, nullable=True)   # JSON: ["Fade", "Barba", ...]
+    years_experience    = Column(Integer, default=0)
+    portfolio_photos    = Column(Text, nullable=True)   # JSON: ["url1", "url2", ...]
+    bio                 = Column(Text, nullable=True)
+
+    # Disponibilidade em tempo real
+    is_available    = Column(Boolean, default=False)
+    current_lat     = Column(Float, nullable=True)
+    current_lng     = Column(Float, nullable=True)
+
+    # Onboarding completo?
+    onboarding_completed = Column(Boolean, default=False)
+
+    created_at  = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at  = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    user = relationship("User", back_populates="barber_profile")
 
 
 class Barbershop(Base):
@@ -89,6 +127,18 @@ class Barbershop(Base):
     reviews = relationship("Review", back_populates="barbershop")
     photos = relationship("Photo", back_populates="barbershop", cascade="all, delete-orphan")
     service_photos = relationship("ServicePhoto", back_populates="shop", cascade="all, delete-orphan")
+
+    @property
+    def barber_type(self) -> str:
+        if self.owner and self.owner.barber_profile:
+            return self.owner.barber_profile.barber_type.value
+        return "salon_owner"
+
+    @property
+    def is_available(self) -> bool:
+        if self.owner:
+            return self.owner.is_online
+        return False
 
 
 class Service(Base):

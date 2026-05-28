@@ -65,6 +65,7 @@ class User(UserBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
+    barber_profile: Optional['BarberProfileResponse'] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -179,6 +180,8 @@ class BarbershopListResponse(BarbershopBase):
     owner_id: int
     average_rating: float
     total_reviews: int
+    barber_type: Optional[str] = None
+    is_available: Optional[bool] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -299,3 +302,40 @@ class ReviewPaginationResponse(BaseModel):
     pages: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ── BARBER PROFILE SCHEMAS ───────────────────────────────────────────────────
+
+class BarberProfileBase(BaseModel):
+    barber_type: Optional[str] = "freelancer"
+    coverage_radius_km: Optional[float] = 5.0
+    home_service_fee: Optional[float] = 0.0
+    specialties: Optional[str] = None
+    years_experience: Optional[int] = 0
+    portfolio_photos: Optional[str] = None
+    bio: Optional[str] = None
+    is_available: Optional[bool] = False
+    current_lat: Optional[float] = None
+    current_lng: Optional[float] = None
+    onboarding_completed: Optional[bool] = False
+
+
+class BarberProfileCreate(BarberProfileBase):
+    barber_type: str
+
+
+class BarberProfileUpdate(BarberProfileBase):
+    pass
+
+
+class BarberProfileResponse(BarberProfileBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Resolve forward references
+User.model_rebuild()

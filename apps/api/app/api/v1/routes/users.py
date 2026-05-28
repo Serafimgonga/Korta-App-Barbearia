@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.schemas import User, UserUpdate
+from app.schemas import User, UserUpdate, OnlineStatus, BarberProfileResponse, BarberProfileUpdate
 from app.services import UserService
 from app.utils.dependencies import get_current_user
 from app.models import User as UserModel
-
-from app.schemas import OnlineStatus
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -35,3 +33,22 @@ def set_online(
 ):
     """Toggle online/offline do utilizador (barbeiro)."""
     return UserService.set_online(db, current_user.id, data.is_online)
+
+
+@router.get("/me/barber-profile", response_model=BarberProfileResponse)
+def get_barber_profile(
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Obtém o perfil do barbeiro autenticado."""
+    return UserService.get_barber_profile(db, current_user.id)
+
+
+@router.put("/me/barber-profile", response_model=BarberProfileResponse)
+def update_barber_profile(
+    data: BarberProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """Atualiza o perfil do barbeiro autenticado."""
+    return UserService.update_barber_profile(db, current_user.id, data)

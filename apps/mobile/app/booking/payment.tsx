@@ -1,154 +1,324 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   SafeAreaView,
-  Alert,
   ActivityIndicator,
+  Platform,
+  Animated,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
-import { Banknote, Smartphone, CheckCircle2 } from 'lucide-react-native';
+import { Spacing, Radius, Shadows } from '../../src/theme';
+import { Check, X } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function Payment() {
   const router = useRouter();
-  const { bookingId } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const {
+    serviceId,
+    serviceName,
+    price,
+    mode,
+    deliveryFee,
+    barberId,
+    barberName,
+    barberRating,
+    totalPrice
+  } = params as any;
+
+  // Calculate prices
+  const finalPrice = totalPrice ? Number(totalPrice) : 500;
+  const finalServiceName = serviceName || 'Corte cabelo';
+  const finalBarberName = barberName || 'Kuyuyu Barber';
+
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
 
-  const methods = [
-    { id: 'cash', label: 'Dinheiro', icon: '💵', description: 'Pagamento à chegada' },
-    { id: 'mobile_money', label: 'Mobile Money', icon: '📱', description: 'MEO, Unitel, Africell' },
-    { id: 'card', label: 'Cartão (futuro)', icon: '💳', description: 'Em breve disponível', disabled: true },
-  ];
+  // Animated values for checkmark scale
+  const checkScaleCash = useRef(new Animated.Value(0)).current;
+  const checkScaleMobile = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (selectedMethod === 'cash') {
+      Animated.spring(checkScaleCash, { toValue: 1, friction: 5, useNativeDriver: true }).start();
+    } else {
+      checkScaleCash.setValue(0);
+    }
+
+    if (selectedMethod === 'mobile_money') {
+      Animated.spring(checkScaleMobile, { toValue: 1, friction: 5, useNativeDriver: true }).start();
+    } else {
+      checkScaleMobile.setValue(0);
+    }
+  }, [selectedMethod]);
 
   const handlePay = async () => {
-    if (!selectedMethod) {
-      Alert.alert('Erro', 'Por favor, seleciona um método de pagamento.');
-      return;
-    }
+    if (!selectedMethod) return;
 
     setProcessing(true);
     setTimeout(() => {
       setProcessing(false);
-      router.push({ pathname: '/booking/rating', params: { bookingId } });
+      router.push({
+        pathname: '/booking/rating',
+        params: {
+          serviceId,
+          serviceName: finalServiceName,
+          barberName: finalBarberName,
+          barberRating
+        }
+      });
     }, 1500);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Confirma o Pagamento</Text>
-      </View>
+    <LinearGradient
+      colors={['#000000', '#18181b']}
+      style={styles.gradient}
+    >
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
 
-      <View style={styles.content}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Valor a pagar</Text>
-          <Text style={styles.amount}>4 000 Kz</Text>
-          <Text style={styles.small}>Corte + Barba (João Mbala)</Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Pagamento</Text>
+          <Text style={styles.headerSubtitle}>Escolha o método</Text>
         </View>
 
-        <Text style={styles.methodsLabel}>Método de Pagamento</Text>
-        <View style={styles.methodsList}>
-          {methods.map((method) => (
-            <TouchableOpacity
-              key={method.id}
-              style={[styles.methodCard, selectedMethod === method.id && styles.methodCardSelected, method.disabled && styles.methodDisabled]}
-              onPress={() => !method.disabled && setSelectedMethod(method.id)}
-              disabled={method.disabled}
+        <View style={styles.content}>
+          {/* Total Price Section */}
+          <View style={styles.amountSection}>
+            <Text style={styles.amountLabel}>Total a pagar:</Text>
+            <Text style={styles.amountValue}>{finalPrice.toLocaleString('pt-AO')} Kz</Text>
+          </View>
+
+          {/* Methods List */}
+          <View style={styles.methodsList}>
+            {/* Method 1: Dinheiro */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.methodCard,
+                selectedMethod === 'cash' && styles.methodCardSelected,
+                pressed && { opacity: 0.9 }
+              ]}
+              onPress={() => setSelectedMethod('cash')}
             >
-              <Text style={styles.methodIcon}>{method.icon}</Text>
-              <View style={styles.methodInfo}>
-                <Text style={styles.methodName}>{method.label}</Text>
-                <Text style={styles.methodDesc}>{method.description}</Text>
+              <View style={styles.methodLeft}>
+                <Text style={styles.methodIcon}>💵</Text>
+                <Text style={styles.methodName}>Dinheiro</Text>
               </View>
-              {selectedMethod === method.id && !method.disabled && (
-                <View style={styles.checkmark}>
-                  <CheckCircle2 size={20} color={Colors.primary} fill={Colors.primary} />
-                </View>
+              {selectedMethod === 'cash' ? (
+                <Animated.View style={[styles.checkmarkCircle, { transform: [{ scale: checkScaleCash }] }]}>
+                  <Check size={12} color="#000" strokeWidth={3} />
+                </Animated.View>
+              ) : (
+                <View style={styles.emptyCheck} />
               )}
-            </TouchableOpacity>
-          ))}
+            </Pressable>
+
+            {/* Method 2: Mobile Money */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.methodCard,
+                selectedMethod === 'mobile_money' && styles.methodCardSelected,
+                pressed && { opacity: 0.9 }
+              ]}
+              onPress={() => setSelectedMethod('mobile_money')}
+            >
+              <View style={styles.methodLeft}>
+                <Text style={styles.methodIcon}>📱</Text>
+                <Text style={styles.methodName}>Mobile Money</Text>
+              </View>
+              {selectedMethod === 'mobile_money' ? (
+                <Animated.View style={[styles.checkmarkCircle, { transform: [{ scale: checkScaleMobile }] }]}>
+                  <Check size={12} color="#000" strokeWidth={3} />
+                </Animated.View>
+              ) : (
+                <View style={styles.emptyCheck} />
+              )}
+            </Pressable>
+
+            {/* Method 3: Carteira Korta (Disabled) */}
+            <View style={[styles.methodCard, styles.methodCardDisabled]}>
+              <View style={styles.methodLeft}>
+                <Text style={styles.methodIcon}>👛</Text>
+                <View style={styles.disabledTextCol}>
+                  <Text style={[styles.methodName, { color: '#71717a' }]}>Carteira Korta</Text>
+                  <Text style={styles.soonText}>Em breve</Text>
+                </View>
+              </View>
+              <View style={styles.crossCircle}>
+                <X size={12} color="#71717a" strokeWidth={3} />
+              </View>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>💡 Dica</Text>
-          <Text style={styles.infoText}>Mobile Money é o método mais rápido e seguro em Angola. Nenhum dado bancário é partilhado com o barbeiro.</Text>
+        {/* Action Button Footer */}
+        <View style={styles.footer}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.payButton,
+              (!selectedMethod || processing) && styles.payButtonDisabled,
+              selectedMethod && !processing && pressed && { opacity: 0.9 },
+              selectedMethod && !processing && Shadows.gold
+            ]}
+            onPress={handlePay}
+            disabled={!selectedMethod || processing}
+          >
+            {processing ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <Text style={[
+                styles.payButtonText,
+                !selectedMethod && { color: '#71717a' }
+              ]}>
+                Confirmar pagamento
+              </Text>
+            )}
+          </Pressable>
         </View>
-      </View>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.payButton, !selectedMethod && styles.payButtonDisabled]}
-          onPress={handlePay}
-          disabled={!selectedMethod || processing}
-        >
-          {processing ? (
-            <ActivityIndicator color={Colors.primaryForeground} />
-          ) : (
-            <Text style={styles.payButtonText}>Confirmar Pagamento</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { padding: Spacing.lg, alignItems: 'center' },
-  title: { fontSize: 22, fontWeight: '900', color: Colors.foreground },
-  content: { flex: 1, padding: Spacing.lg, gap: Spacing.lg },
-  summaryCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    padding: Spacing.xl,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.elegant,
+  gradient: {
+    flex: 1,
   },
-  summaryLabel: { fontSize: 11, fontWeight: '700', color: Colors.mutedForeground, textTransform: 'uppercase' },
-  amount: { fontSize: 32, fontWeight: '900', color: Colors.primary, marginTop: 8 },
-  small: { fontSize: 12, color: Colors.mutedForeground, marginTop: 6 },
-  methodsLabel: { fontSize: 12, fontWeight: '800', color: Colors.foreground, marginTop: Spacing.lg },
-  methodsList: { gap: Spacing.md },
+  container: {
+    flex: 1,
+  },
+  header: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm + 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#27272a',
+    gap: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: '#71717a',
+    fontWeight: '500',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.xl,
+    gap: Spacing.xl,
+  },
+  amountSection: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  amountLabel: {
+    fontSize: 14,
+    color: '#a1a1aa',
+    fontWeight: '600',
+  },
+  amountValue: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#f59e0b',
+  },
+  methodsList: {
+    gap: Spacing.md,
+  },
   methodCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    padding: Spacing.lg,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    gap: Spacing.md,
-  },
-  methodCardSelected: { borderColor: Colors.primary, backgroundColor: 'rgba(212, 175, 55, 0.08)' },
-  methodDisabled: { opacity: 0.5 },
-  methodIcon: { fontSize: 24 },
-  methodInfo: { flex: 1 },
-  methodName: { fontSize: 14, fontWeight: '800', color: Colors.foreground },
-  methodDesc: { fontSize: 12, color: Colors.mutedForeground, marginTop: 2 },
-  checkmark: { marginLeft: 'auto' },
-  infoBox: {
-    backgroundColor: 'rgba(212, 175, 55, 0.1)',
-    borderRadius: Radius.md,
-    padding: Spacing.lg,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
-  },
-  infoTitle: { fontSize: 13, fontWeight: '800', color: Colors.foreground },
-  infoText: { fontSize: 12, color: Colors.mutedForeground, marginTop: 6, lineHeight: 18 },
-  footer: { padding: Spacing.lg },
-  payButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
+    justifyContent: 'space-between',
+    backgroundColor: '#18181B',
     borderRadius: Radius.lg,
-    alignItems: 'center',
-    ...Shadows.gold,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    borderWidth: 1.5,
+    borderColor: '#27272A',
   },
-  payButtonDisabled: { opacity: 0.3 },
-  payButtonText: { color: Colors.primaryForeground, fontSize: 16, fontWeight: '900', textTransform: 'uppercase' },
+  methodCardSelected: {
+    borderColor: '#f59e0b',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+  },
+  methodCardDisabled: {
+    opacity: 0.5,
+    borderColor: '#1c1c1e',
+  },
+  methodLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  methodIcon: {
+    fontSize: 24,
+  },
+  methodName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  disabledTextCol: {
+    gap: 2,
+  },
+  soonText: {
+    fontSize: 11,
+    color: '#71717a',
+    fontWeight: '500',
+  },
+  checkmarkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#f59e0b',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  crossCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#27272a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyCheck: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#3f3f46',
+  },
+  footer: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: '#27272a',
+    backgroundColor: '#000000',
+  },
+  payButton: {
+    backgroundColor: '#f59e0b',
+    height: 56,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  payButtonDisabled: {
+    backgroundColor: '#27272A',
+  },
+  payButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '800',
+  },
 });

@@ -1,8 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TextInput, ScrollView,
-  RefreshControl, ActivityIndicator, TouchableOpacity,
-  Dimensions, Animated, Platform, Alert
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  ScrollView,
+  RefreshControl,
+  ActivityIndicator,
+  TouchableOpacity,
+  Platform,
+  Alert,
+  Animated
 } from 'react-native';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
@@ -10,22 +19,17 @@ import { useQuery } from '@tanstack/react-query';
 import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store/auth';
 import { BarbershopService } from '../../src/services/barbershops';
+import { BarbershopCard } from '../../src/components/BarbershopCard';
 import {
-  BarbershopCard, CompactBarbershopCard, FeaturedCutCard
-} from '../../src/components/BarbershopCard';
-import {
-  Search, MapPin, Navigation, Scissors, Star, Crown,
-  Flame, TrendingUp, Filter, SlidersHorizontal
+  Search,
+  MapPin,
+  Scissors,
+  Star,
+  Crown,
+  Navigation,
+  SlidersHorizontal
 } from 'lucide-react-native';
-
-const FEATURED_CUTS = [
-  { imageUrl: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400', caption: 'Fade Perfeito', shopName: 'KORTA Premium' },
-  { imageUrl: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=400', caption: 'Corte Clássico', shopName: 'Elite Cuts' },
-  { imageUrl: 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=400', caption: 'Barba Premium', shopName: 'Gold Blade' },
-  { imageUrl: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400', caption: 'Degradê Moderno', shopName: 'UrbanCuts' },
-  { imageUrl: 'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=400', caption: 'Estilo Afro', shopName: 'Razor Sharp' },
-  { imageUrl: 'https://images.unsplash.com/photo-1534297635766-a262cdcb8ee4?w=400', caption: 'Linha Definida', shopName: 'Barber King' },
-];
+import { StatusBar } from 'expo-status-bar';
 
 const CATEGORIES = [
   { id: 'all',     label: 'Todos',        icon: SlidersHorizontal },
@@ -34,64 +38,25 @@ const CATEGORIES = [
   { id: 'nearby',  label: 'Perto de Ti',  icon: Navigation },
 ];
 
-// Componente com animação de fade-in simples
-const FadeInView = ({ delay = 0, children, style }: any) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(20)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 500, delay, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 500, delay, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={[{ opacity, transform: [{ translateY }] }, style]}>
-      {children}
-    </Animated.View>
-  );
-};
-
-const QuickRequestCTA = ({ onPress }: { onPress: () => void }) => {
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity 
-        style={styles.ctaButton} 
-        activeOpacity={0.85}
-        onPress={onPress}
-      >
-        <Text style={styles.ctaButtonText}>Pedir corte agora</Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
-
 export default function HomeScreen() {
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
 
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
@@ -101,7 +66,6 @@ export default function HomeScreen() {
   }, []);
 
   const handleQuickRequest = () => {
-    const isAuthenticated = useAuthStore.getState().isAuthenticated;
     if (!isAuthenticated) {
       Alert.alert(
         "💈 Entra na tua Conta!",
@@ -115,12 +79,10 @@ export default function HomeScreen() {
     }
 
     router.push({
-      pathname: '/booking/searching',
+      pathname: '/booking/select-service',
       params: {
-        serviceId: '1',
         lat: String(location?.coords.latitude || -8.8368),
         lng: String(location?.coords.longitude || 13.2332),
-        serviceName: 'Corte Premium'
       }
     });
   };
@@ -146,144 +108,136 @@ export default function HomeScreen() {
     }
   })();
 
-  const premiumShops = allItems.filter((i: any) => i.is_premium).slice(0, 6);
-
   const renderHeader = () => (
-    <View>
-      {/* Header com Logo Grande e Localização */}
-      <FadeInView delay={100}>
-        <View style={styles.headerRow}>
-          <Text style={styles.largeLogo}>KORTA</Text>
-          <View style={styles.locationContainer}>
-            <MapPin size={14} color="#f59e0b" />
-            <Text style={styles.locationText} numberOfLines={1}>
-              {location ? 'Luanda, Angola 📍' : 'Angola 🇦🇴'}
-            </Text>
+    <View style={styles.headerContainer}>
+      {/* Welcome Row */}
+      <View style={styles.welcomeRow}>
+        <View style={styles.welcomeLeft}>
+          <Text style={styles.welcomeText}>Olá,</Text>
+          <Text style={styles.userName}>{isAuthenticated && user?.name ? user.name : 'Visitante'} 👋</Text>
+        </View>
+        <View style={styles.locationBadge}>
+          <MapPin size={12} color="#f59e0b" />
+          <Text style={styles.locationText} numberOfLines={1}>
+            {location ? 'Luanda, AO' : 'Angola'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Premium Simplistic CTA Card */}
+      <TouchableOpacity
+        style={styles.heroCard}
+        onPress={handleQuickRequest}
+        activeOpacity={0.9}
+      >
+        <View style={styles.heroGlowLine} />
+        <View style={styles.heroContent}>
+          <View style={styles.heroTextContainer}>
+            <Text style={styles.heroTitle}>Pedir corte agora</Text>
+            <Text style={styles.heroSubtitle}>Um barbeiro qualificado vai até à tua localização</Text>
+          </View>
+          <View style={styles.heroIconCircle}>
+            <Scissors size={24} color="#000000" strokeWidth={2.5} />
           </View>
         </View>
-      </FadeInView>
+      </TouchableOpacity>
 
-      {/* CTA Principal */}
-      <QuickRequestCTA onPress={handleQuickRequest} />
+      {/* Simplified Search Bar */}
+      <View style={styles.searchBar}>
+        <Search size={18} color="#71717a" />
+        <TextInput
+          placeholder="Pesquisar salões ou barbeiros..."
+          value={search}
+          onChangeText={setSearch}
+          style={styles.searchInput}
+          placeholderTextColor="#71717a"
+          keyboardAppearance="dark"
+        />
+      </View>
 
-      {/* Pesquisa */}
-      <FadeInView delay={200}>
-        <View style={styles.searchContainer}>
-          <Search size={20} color={Colors.mutedForeground} />
-          <TextInput
-            placeholder="Procura barbearias, cortes..."
-            value={search} onChangeText={setSearch}
-            style={styles.searchInput} placeholderTextColor={Colors.mutedForeground}
-          />
-          <TouchableOpacity style={styles.filterButton}>
-            <Filter size={18} color={Colors.primary} />
-          </TouchableOpacity>
-        </View>
-      </FadeInView>
-
-      {/* Categorias */}
-      <FadeInView delay={300}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContainer}>
-          {CATEGORIES.map(({ id, label, icon: Icon }) => (
+      {/* Categories Horizontal Pills */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoriesScroll}
+      >
+        {CATEGORIES.map(({ id, label, icon: Icon }) => {
+          const isActive = activeCategory === id;
+          return (
             <TouchableOpacity
               key={id}
-              style={[styles.categoryPill, activeCategory === id && styles.categoryPillActive]}
+              style={[
+                styles.categoryPill,
+                isActive && styles.categoryPillActive
+              ]}
               onPress={() => setActiveCategory(id)}
               activeOpacity={0.8}
             >
-              <Icon size={14} color={activeCategory === id ? Colors.primaryForeground : Colors.mutedForeground} />
-              <Text style={[styles.categoryText, activeCategory === id && styles.categoryTextActive]}>{label}</Text>
+              <Icon size={14} color={isActive ? '#000000' : '#71717a'} />
+              <Text style={[
+                styles.categoryText,
+                isActive && styles.categoryTextActive
+              ]}>
+                {label}
+              </Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </FadeInView>
+          );
+        })}
+      </ScrollView>
 
-      {/* 🔥 Cortes em Destaque */}
-      <FadeInView delay={400}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionLeft}>
-            <Flame size={18} color={Colors.error} />
-            <Text style={styles.sectionTitle}>Cortes em Destaque</Text>
-          </View>
-          <Text style={styles.seeAll}>Ver todos</Text>
+      {/* Section Title */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>
+          {activeCategory === 'premium' ? 'Salões Premium' :
+           activeCategory === 'top' ? 'Mais Recomendados' :
+           activeCategory === 'nearby' ? 'Perto de Ti' :
+           'Salões Disponíveis'}
+        </Text>
+        <View style={styles.countBadge}>
+          <Text style={styles.countBadgeText}>{filteredItems.length}</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-          {FEATURED_CUTS.map((cut, i) => (
-            <FeaturedCutCard key={i} imageUrl={cut.imageUrl} caption={cut.caption} shopName={cut.shopName} index={i} />
-          ))}
-        </ScrollView>
-      </FadeInView>
-
-      {/* 👑 Premium */}
-      {premiumShops.length > 0 && (
-        <FadeInView delay={500}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionLeft}>
-              <Crown size={18} color={Colors.primary} />
-              <Text style={styles.sectionTitle}>Premium</Text>
-            </View>
-            <TouchableOpacity onPress={() => setActiveCategory('premium')}>
-              <Text style={styles.seeAll}>Ver todos</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-            {premiumShops.map((shop: any, i: number) => (
-              <CompactBarbershopCard
-                key={shop.id} name={shop.name}
-                imageUrl={shop.photos?.[0]?.url}
-                rating={shop.average_rating || 0} city={shop.city}
-                isPremium={shop.is_premium} index={i}
-                onPress={() => router.push(`/barbershop/${shop.id}`)}
-              />
-            ))}
-          </ScrollView>
-        </FadeInView>
-      )}
-
-      {/* Título lista principal */}
-      <FadeInView delay={600}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionLeft}>
-            <TrendingUp size={18} color={Colors.primary} />
-            <Text style={styles.sectionTitle}>
-              {activeCategory === 'premium' ? 'Barbearias Premium' :
-               activeCategory === 'top' ? 'Melhor Avaliadas' :
-               activeCategory === 'nearby' ? 'Perto de Ti' :
-               'Todas as Barbearias'}
-            </Text>
-          </View>
-          <View style={styles.countBadge}>
-            <Text style={styles.countBadgeText}>{filteredItems.length}</Text>
-          </View>
-        </View>
-      </FadeInView>
+      </View>
     </View>
   );
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      <StatusBar style="light" />
+      
       <FlatList
         data={filteredItems}
         keyExtractor={(item: any) => item.id?.toString() || Math.random().toString()}
         renderItem={({ item, index }) => (
           <BarbershopCard
-            name={item.name} address={item.address} city={item.city}
-            rating={item.average_rating || 0} reviewsCount={item.total_reviews || 0}
-            isPremium={item.is_premium} status={item.status}
-            openHours={item.open_hours} imageUrl={item.photos?.[0]?.url}
-            index={index} onPress={() => router.push(`/barbershop/${item.id}`)}
+            name={item.name}
+            address={item.address}
+            city={item.city}
+            rating={item.average_rating || 0}
+            reviewsCount={item.total_reviews || 0}
+            isPremium={item.is_premium}
+            status={item.status}
+            openHours={item.open_hours}
+            imageUrl={item.photos?.[0]?.url}
+            index={index}
+            onPress={() => router.push(`/barbershop/${item.id}`)}
           />
         )}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={renderHeader}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.primary} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor="#f59e0b"
+          />
+        }
         ListEmptyComponent={
           !isLoading ? (
             <View style={styles.emptyContainer}>
-              <Scissors size={48} color={Colors.mutedForeground} strokeWidth={1} />
-              <Text style={styles.emptyTitle}>Nenhuma barbearia encontrada</Text>
-              <Text style={styles.emptyText}>Tenta outra pesquisa ou categoria diferente.</Text>
+              <Scissors size={44} color="#3f3f46" strokeWidth={1.5} />
+              <Text style={styles.emptyTitle}>Nenhum salão encontrado</Text>
+              <Text style={styles.emptyText}>Tente refinar a sua pesquisa ou trocar de categoria.</Text>
             </View>
           ) : null
         }
@@ -291,128 +245,198 @@ export default function HomeScreen() {
 
       {isLoading && !isRefetching && (
         <View style={styles.loadingOverlay}>
-          <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingText}>A carregar barbearias...</Text>
-          </View>
+          <ActivityIndicator size="large" color="#f59e0b" />
+          <Text style={styles.loadingText}>A carregar...</Text>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-
-  headerRow: {
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  listContent: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingBottom: Spacing.xl,
+  },
+  headerContainer: {
+    gap: Spacing.md + 2,
+    marginBottom: Spacing.sm,
+  },
+  welcomeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
     marginTop: Spacing.xs,
   },
-  largeLogo: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#f59e0b', // Amber-500
-    letterSpacing: 2,
-    fontFamily: Platform.OS === 'ios' ? 'Sora' : 'sans-serif',
+  welcomeLeft: {
+    gap: 2,
   },
-  locationContainer: {
+  welcomeText: {
+    fontSize: 14,
+    color: '#71717a',
+    fontWeight: '500',
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  locationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.surface,
+    gap: 5,
+    backgroundColor: '#18181B',
     borderRadius: Radius.full,
-    paddingHorizontal: Spacing.sm + 4,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1.2,
+    borderColor: '#27272A',
   },
   locationText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.mutedForeground,
+    color: '#a1a1aa',
   },
-  ctaButton: {
-    backgroundColor: '#f59e0b', // Amber-500
-    borderRadius: Radius.lg,
-    paddingVertical: 16,
+  heroCard: {
+    backgroundColor: '#18181B',
+    borderRadius: Radius.xl,
+    borderWidth: 1.5,
+    borderColor: '#27272A',
+    overflow: 'hidden',
+  },
+  heroGlowLine: {
+    height: 3,
+    backgroundColor: '#f59e0b',
+  },
+  heroContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.lg,
+    gap: 12,
+  },
+  heroTextContainer: {
+    flex: 1,
+    gap: 4,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  heroSubtitle: {
+    fontSize: 12,
+    color: '#71717a',
+    lineHeight: 16,
+    fontWeight: '500',
+  },
+  heroIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f59e0b',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.lg,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#f59e0b',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.25,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 8,
-      }
-    }),
   },
-  ctaButtonText: {
-    color: '#000000',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#18181B',
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.md,
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: '#27272A',
   },
-
-  searchContainer: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Colors.surface, borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.md, height: 54,
-    borderWidth: 1, borderColor: Colors.border,
-    marginBottom: Spacing.md, ...Shadows.elegant,
+  searchInput: {
+    flex: 1,
+    marginLeft: Spacing.sm,
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '500',
   },
-  searchInput: { flex: 1, marginLeft: Spacing.sm, fontSize: 15, color: Colors.foreground },
-  filterButton: {
-    width: 38, height: 38, borderRadius: Radius.md,
-    backgroundColor: Colors.accent, justifyContent: 'center', alignItems: 'center',
+  categoriesScroll: {
+    gap: Spacing.sm,
+    paddingVertical: 2,
   },
-
-  categoriesContainer: { paddingBottom: Spacing.md, gap: Spacing.sm },
   categoryPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: Spacing.md, paddingVertical: 10,
-    borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border,
-    backgroundColor: Colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: '#27272A',
+    backgroundColor: '#18181B',
   },
-  categoryPillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  categoryText: { fontSize: 13, fontWeight: '700', color: Colors.mutedForeground },
-  categoryTextActive: { color: Colors.primaryForeground },
-
+  categoryPillActive: {
+    backgroundColor: '#f59e0b',
+    borderColor: '#f59e0b',
+  },
+  categoryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#71717a',
+  },
+  categoryTextActive: {
+    color: '#000000',
+  },
   sectionHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: Spacing.sm, marginTop: Spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing.sm,
   },
-  sectionLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sectionTitle: { fontSize: 18, fontWeight: '900', color: Colors.foreground },
-  seeAll: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '950',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
   countBadge: {
-    backgroundColor: Colors.primary, paddingHorizontal: 10, paddingVertical: 3,
+    backgroundColor: '#27272A',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: Radius.full,
   },
-  countBadgeText: { fontSize: 12, fontWeight: '900', color: Colors.primaryForeground },
-  horizontalScroll: { paddingBottom: Spacing.sm, paddingRight: Spacing.md },
-
-  listContent: { padding: Spacing.md },
-
+  countBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#a1a1aa',
+  },
+  emptyContainer: {
+    padding: Spacing.xxl,
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '850',
+    color: '#FFFFFF',
+    marginTop: Spacing.sm,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#71717a',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: 'rgba(13,13,13,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    gap: 12,
   },
-  loadingCard: {
-    backgroundColor: Colors.surface, borderRadius: Radius.xl,
-    padding: Spacing.xl, alignItems: 'center', gap: Spacing.md,
-    borderWidth: 1, borderColor: Colors.border, ...Shadows.elegant,
+  loadingText: {
+    fontSize: 14,
+    color: '#a1a1aa',
+    fontWeight: '600',
   },
-  loadingText: { fontSize: 14, color: Colors.mutedForeground, fontWeight: '600' },
-
-  emptyContainer: { padding: Spacing.xxl, alignItems: 'center', gap: Spacing.sm },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: Colors.foreground },
-  emptyText: { fontSize: 14, color: Colors.mutedForeground, textAlign: 'center' },
 });

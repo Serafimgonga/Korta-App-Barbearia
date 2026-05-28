@@ -53,6 +53,9 @@ ivo@gmail.com
 client	$2b$12$BjH0LWyEMa..gZWwO.TENuV6ZAIMtyRboMbAYbzy0qbEwU/GxzCD2
 
 
+a app deve saber os barbeiiros que nao tem espacos (os freelancer), e aqueles que tem espacos e nao fazem por encomendas , e aqueles que fazem os dois servicos , deve ter um filtro sobre, estes , e ao pedir um corte ja deve saber quais sao aqueles que se deslocam e que estao ativos , se for para ele se deslocar tambem ja deve saber quais tem espacos e aceitam deslocacao
+
+
 
 
 

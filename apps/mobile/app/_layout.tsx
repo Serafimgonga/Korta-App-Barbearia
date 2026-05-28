@@ -78,8 +78,12 @@ export default function RootLayout() {
         router.replace("/");
       }
     } else if (isAuthenticated && user) {
-      // Se autenticado e na raiz ou login/registo, redireciona para a respetiva área de trabalho
-      if (!inTabsGroup && !inBarberGroup) {
+      // Se autenticado e na página de welcome, login/registo ou onboarding, redireciona para a área de trabalho
+      const inWelcome = segments.length === 0 || (segments.length === 1 && segments[0] === "index");
+      const inOnboarding = segments[0] === "onboarding";
+      const shouldRedirect = inAuthGroup || inWelcome || inOnboarding;
+
+      if (shouldRedirect) {
         if (user.role === "barber") {
           router.replace("/(barber)/dashboard");
         } else {
@@ -96,12 +100,28 @@ export default function RootLayout() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: Colors.background },
+          animation: 'slide_from_right',
         }}
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(barber)" />
+        <Stack.Screen name="onboarding/profile" />
+        <Stack.Screen name="onboarding/location" />
+        <Stack.Screen name="booking/select-service" />
+        <Stack.Screen name="booking/select-mode" />
+        <Stack.Screen name="booking/select-barber" />
+        <Stack.Screen name="booking/confirm" />
+        <Stack.Screen name="booking/create" />
+        <Stack.Screen name="booking/searching" />
+        <Stack.Screen name="booking/tracking" />
+        <Stack.Screen name="booking/payment" />
+        <Stack.Screen name="booking/rating" />
+        <Stack.Screen name="booking/barber-found" />
+        <Stack.Screen name="barbershop/[id]" />
+        <Stack.Screen name="service/[id]" />
+        <Stack.Screen name="service/create" />
       </Stack>
       <CustomAlertModal />
     </QueryClientProvider>

@@ -37,8 +37,8 @@ def test_barber_login():
     """Test login for the barber."""
     global barber_token
     payload = {
-        "email": "serafim@korta.ao",
-        "password": "korta123"
+        "email": "kuyuyu@korta.ao",
+        "password": "123456"
     }
     response = client.post("/api/v1/auth/login", json=payload)
     assert response.status_code == 200
@@ -51,8 +51,8 @@ def test_client_login():
     """Test login for a client."""
     global client_token
     payload = {
-        "email": "abel@gmail.com",
-        "password": "korta123"
+        "email": "cliente@gmail.com",
+        "password": "123456"
     }
     response = client.post("/api/v1/auth/login", json=payload)
     assert response.status_code == 200
@@ -67,13 +67,13 @@ def test_get_me():
     headers = {"Authorization": f"Bearer {barber_token}"}
     response = client.get("/api/v1/users/me", headers=headers)
     assert response.status_code == 200
-    assert response.json()["email"] == "serafim@korta.ao"
+    assert response.json()["email"] == "kuyuyu@korta.ao"
 
     # Client profile
     headers = {"Authorization": f"Bearer {client_token}"}
     response = client.get("/api/v1/users/me", headers=headers)
     assert response.status_code == 200
-    assert response.json()["email"] == "abel@gmail.com"
+    assert response.json()["email"] == "cliente@gmail.com"
 
 
 def test_get_my_barbershops():
@@ -173,7 +173,7 @@ def test_barbershop_reviews():
     # Clean up any existing review by the test client for this shop so the test is reproducible
     db = next(get_db())
     try:
-        client_user = db.query(User).filter(User.email == "abel@gmail.com").first()
+        client_user = db.query(User).filter(User.email == "cliente@gmail.com").first()
         if client_user and first_barbershop_id:
             db.query(Review).filter(
                 Review.user_id == client_user.id,
@@ -202,7 +202,7 @@ def test_barbershop_reviews():
     # Clean up review after test
     db = next(get_db())
     try:
-        client_user = db.query(User).filter(User.email == "abel@gmail.com").first()
+        client_user = db.query(User).filter(User.email == "cliente@gmail.com").first()
         if client_user and first_barbershop_id:
             db.query(Review).filter(
                 Review.user_id == client_user.id,

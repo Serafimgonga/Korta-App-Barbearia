@@ -5,7 +5,8 @@ from typing import Optional
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.repositories import (
     UserRepository, BarbershopRepository, ServiceRepository,
-    BookingRepository, ReviewRepository, PhotoRepository, ServicePhotoRepository
+    BookingRepository, ReviewRepository, PhotoRepository, ServicePhotoRepository,
+    BarberProfileRepository
 )
 from app.repositories import BookingRequestRepository
 from app.core.database import SessionLocal
@@ -18,6 +19,7 @@ from app.schemas import (
     BookingCreate, BookingStatusUpdate,
     BookingRequestCreate,
     ReviewCreate, ServicePhotoCreate, ServicePhotoUpdate,
+    BarberProfileCreate, BarberProfileUpdate
 )
 from app.models import UserRole, BookingStatus
 
@@ -96,7 +98,48 @@ class UserService:
         user = UserRepository.get_by_id(db, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="Utilizador não encontrado")
+        
+        # Also toggle availability in profile if exists
+        profile = BarberProfileRepository.get_by_user_id(db, user_id)
+        if profile:
+            BarberProfileRepository.update(db, profile, is_available=is_online)
+            
         return UserRepository.update(db, user, is_online=is_online)
+
+    @staticmethod
+    def get_barber_profile(db: Session, user_id: int):
+        user = UserRepository.get_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Utilizador não encontrado")
+        if user.role != UserRole.barber:
+            raise HTTPException(status_code=400, detail="Utilizador não é um barbeiro")
+            
+        profile = BarberProfileRepository.get_by_user_id(db, user_id)
+        if not profile:
+            # Create a default profile
+            profile = BarberProfileRepository.create(
+                db, 
+                user_id=user_id, 
+                barber_type="freelancer",
+                onboarding_completed=False
+            )
+        return profile
+
+    @staticmethod
+    def update_barber_profile(db: Session, user_id: int, data: BarberProfileUpdate):
+        user = UserRepository.get_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Utilizador não encontrado")
+        if user.role != UserRole.barber:
+            raise HTTPException(status_code=400, detail="Utilizador não é um barbeiro")
+            
+        profile = BarberProfileRepository.get_by_user_id(db, user_id)
+        if not profile:
+            profile = BarberProfileRepository.create(db, user_id=user_id, **data.model_dump(exclude_none=True))
+        else:
+            profile = BarberProfileRepository.update(db, profile, **data.model_dump(exclude_none=True))
+        return profile
+
 
 
 # ── BARBERSHOP SERVICE ────────────────────────────────────────────────────────
@@ -267,7 +310,21 @@ class BookingService:
         if is_client and not is_owner and data.status != BookingStatus.cancelled:
             raise HTTPException(status_code=403, detail="Clientes só podem cancelar marcações")
 
-        return BookingRepository.update_status(db, booking, data.status)
+        res = BookingRepository.update_status(db, booking, data.status)
+        try:
+            from app.utils.websocket_manager import send_notification_sync
+            send_notification_sync(
+                booking.user_id,
+                {
+                    "type": "booking_status_updated",
+                    "booking_id": booking.id,
+                    "status": data.status,
+                    "message": f"O estado da tua marcação foi atualizado para {data.status}."
+                }
+            )
+        except Exception as e:
+            pass
+        return res
 
     @staticmethod
     def get_busy_slots(db: Session, barbershop_id: int, date: str) -> list[str]:
@@ -394,14 +451,36 @@ class BookingRequestService:
                     owner = db.query(User).filter(User.id == shop.owner_id).first()
                     if not owner or not owner.is_online:
                         continue
+                    # verificar se o barbeiro aceita encomendas/deslocações (freelancer ou hybrid)
+                    from app.models import BarberProfile, BarberType
+                    profile = db.query(BarberProfile).filter(BarberProfile.user_id == owner.id).first()
+                    if profile and profile.barber_type == BarberType.salon_owner:
+                        continue
+
                     # verificar se a barbearia tem o serviço solicitado
                     has_service = any((s.id == req.service_id and s.is_active) for s in shop.services)
                     if not has_service:
                         continue
                     candidates.append((shop, owner))
 
-                # ordenar por proximidade aproximada
-                candidates.sort(key=lambda so: ( (so[0].latitude - req.lat) ** 2 + (so[0].longitude - req.lng) ** 2 ))
+                # Ordenar dinamicamente com base em distância, rating, feedbacks e status premium
+                import math
+                def score_candidate(shop):
+                    lat_dist = (shop.latitude - req.lat) * 111.0
+                    lng_dist = (shop.longitude - req.lng) * (111.0 * math.cos(math.radians(req.lat)))
+                    dist_km = math.sqrt(lat_dist**2 + lng_dist**2)
+                    
+                    rating = shop.average_rating or 4.0
+                    reviews = shop.total_reviews or 0
+                    feedback_score = min(reviews, 100) / 10.0  # máx 10 pontos
+                    
+                    # Score final: prioriza menor distância, maior rating e mais feedbacks
+                    score = (rating * 2.0) + feedback_score - (dist_km * 2.0)
+                    if shop.is_premium:
+                        score += 3.0
+                    return score
+
+                candidates.sort(key=lambda so: score_candidate(so[0]), reverse=True)
 
                 for shop, owner in candidates:
                     # atualizar attempted_barbers

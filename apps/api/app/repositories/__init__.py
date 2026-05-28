@@ -3,7 +3,7 @@ from sqlalchemy import func, and_
 from typing import Optional
 from app.models import (
     User, Barbershop, Service, Booking, Review, Photo, ServicePhoto, BookingRequest,
-    UserRole, BarberStatus, BookingStatus, BookingRequestStatus
+    UserRole, BarberStatus, BookingStatus, BookingRequestStatus, BarberProfile
 )
 
 
@@ -384,3 +384,30 @@ class BookingRequestRepository:
         db.commit()
         db.refresh(req)
         return req
+
+
+# ── BARBER PROFILE REPOSITORY ─────────────────────────────────────────────────
+
+class BarberProfileRepository:
+
+    @staticmethod
+    def get_by_user_id(db: Session, user_id: int) -> Optional[BarberProfile]:
+        return db.query(BarberProfile).filter(BarberProfile.user_id == user_id).first()
+
+    @staticmethod
+    def create(db: Session, **kwargs) -> BarberProfile:
+        profile = BarberProfile(**kwargs)
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+        return profile
+
+    @staticmethod
+    def update(db: Session, profile: BarberProfile, **kwargs) -> BarberProfile:
+        for key, value in kwargs.items():
+            if value is not None:
+                setattr(profile, key, value)
+        db.commit()
+        db.refresh(profile)
+        return profile
+

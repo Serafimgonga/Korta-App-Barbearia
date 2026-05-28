@@ -52,35 +52,41 @@ export default function LocationPermission() {
     ).start();
   }, []);
 
+  const navigateNext = () => {
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    if (userType === 'barber') {
+      if (isAuthenticated) {
+        router.replace('/(barber)/dashboard');
+      } else {
+        router.replace({
+          pathname: '/(auth)/login',
+          params: { role: 'barber' }
+        });
+      }
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
+
   const handleRequestPermission = async () => {
     try {
       console.log("📍 [KORTA] A solicitar permissão de GPS...");
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      
-      // Independentemente de ser aceito ou não, avançamos no fluxo para garantir a melhor UX
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
-        console.log("✅ [KORTA] Permissão concedida pelo usuário!");
+        console.log("✅ [KORTA] Permissão concedida!");
       } else {
-        console.log("⚠️ [KORTA] Permissão de localização negada.");
-      }
-
-      // Redireciona o usuário dependendo do perfil escolhido
-      const isAuthenticated = useAuthStore.getState().isAuthenticated;
-      if (userType === 'barber') {
-        if (isAuthenticated) {
-          router.replace('/(barber)/dashboard');
-        } else {
-          router.replace('/(auth)/login');
-        }
-      } else {
-        // Cliente vai para o painel principal como convidado
-        router.replace('/(tabs)');
+        console.log("⚠️ [KORTA] Permissão negada — avançando mesmo assim.");
       }
     } catch (e) {
-      console.error("Erro ao obter permissão de localização:", e);
-      // Fallback
-      router.replace('/(tabs)');
+      console.error("Erro ao obter permissão:", e);
+    } finally {
+      navigateNext();
     }
+  };
+
+  const handleSkip = () => {
+    console.log("⏭️ [KORTA] Utilizador optou por decidir a localização mais tarde.");
+    navigateNext();
   };
 
   return (
@@ -128,17 +134,17 @@ export default function LocationPermission() {
             <TouchableOpacity
               style={styles.skipButton}
               activeOpacity={0.7}
-              onPress={handleRequestPermission}
+              onPress={handleSkip}
             >
               <Text style={styles.skipText}>Decidir mais tarde</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Indicador de progresso */}
+          {/* Indicador de progresso: 2 passos para clientes, 3 para barbeiros */}
           <View style={styles.progressDots}>
             <View style={styles.dot} />
             <View style={[styles.dot, styles.dotActive]} />
-            <View style={styles.dot} />
+            {userType === 'barber' && <View style={styles.dot} />}
           </View>
 
         </Animated.View>

@@ -11,7 +11,7 @@ from sqlalchemy import text
 from app.core.database import SessionLocal, engine
 from app.models import (
     Base, User, Barbershop, Service, ServicePhoto, Booking, Review, Photo,
-    UserRole, BarberStatus, BookingStatus, PhotoType
+    UserRole, BarberStatus, BookingStatus, PhotoType, BarberProfile, BarberType
 )
 from app.core.security import hash_password
 
@@ -45,7 +45,8 @@ def seed_test_db():
         hashed_password=hash_password("korta123"),
         role=UserRole.barber,
         avatar_url="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200",
-        is_active=True
+        is_active=True,
+        is_online=True
     )
     db.add(barber)
     
@@ -77,6 +78,22 @@ def seed_test_db():
     db.refresh(barber)
     db.refresh(client1)
     db.refresh(client2)
+    
+    # Criar BarberProfile para Serafim Gonga
+    profile = BarberProfile(
+        user_id=barber.id,
+        barber_type=BarberType.hybrid,
+        coverage_radius_km=15.0,
+        home_service_fee=1000.0,
+        specialties='["Fade", "Barba", "Corte cabelo combo"]',
+        years_experience=8,
+        bio="Estilo clássico e moderno com finalização profissional.",
+        is_available=True,
+        onboarding_completed=True
+    )
+    db.add(profile)
+    db.commit()
+    print("✅ BarberProfile criado para Serafim Gonga (Hybrid)")
     
     print(f"   Barbeiro: {barber.name} ({barber.email})")
     print(f"   Cliente 1: {client1.name} ({client1.email})")

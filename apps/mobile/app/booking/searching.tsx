@@ -1,404 +1,355 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
+  Pressable,
   SafeAreaView,
-  Alert,
   Animated,
+  Easing,
+  Platform,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Colors, Spacing, Radius, Shadows } from '../../src/theme';
+import { Spacing, Radius } from '../../src/theme';
+import { Loader2 } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BookingService } from '../../src/services/bookings';
 import { addWebSocketListener } from '../../src/hooks/useWebSocket';
-import { Compass, ArrowRight } from 'lucide-react-native';
 
 export default function Searching() {
-  const params = useLocalSearchParams();
   const router = useRouter();
-  const { serviceId, lat, lng, serviceName } = params as any;
-
+  const params = useLocalSearchParams();
   const [requestId, setRequestId] = useState<number | null>(null);
-  const [status, setStatus] = useState<string>('searching');
-  const [loading, setLoading] = useState(false);
-  const [radius, setRadius] = useState<number>(5);
-  const [countdown, setCountdown] = useState<number>(60);
+  const requestIdRef = useRef<number | null>(null);
+  const {
+    lat,
+    lng,
+    serviceId,
+    serviceName,
+    price,
+    mode,
+    deliveryFee,
+    barberId,
+    barberName,
+    barberRating,
+    totalPrice
+  } = params as any;
 
-  // Valores de Animação
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(0.6)).current;
-  const timerRef = useRef<any>(null);
-  const fallbackIntervalRef = useRef<any>(null);
+  // Animations
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  
+  // Three dots animations
+  const dot1Scale = useRef(new Animated.Value(0.4)).current;
+  const dot2Scale = useRef(new Animated.Value(0.4)).current;
+  const dot3Scale = useRef(new Animated.Value(0.4)).current;
+  
+  const dot1Opacity = useRef(new Animated.Value(0.3)).current;
+  const dot2Opacity = useRef(new Animated.Value(0.3)).current;
+  const dot3Opacity = useRef(new Animated.Value(0.3)).current;
 
-  // Loop de Animação do Radar
+  // Infinite Rotation for Spinner
   useEffect(() => {
-    const startPulse = () => {
-      pulseAnim.setValue(0.6);
-      opacityAnim.setValue(0.8);
-      Animated.parallel([
-        Animated.timing(pulseAnim, {
-          toValue: 2.2,
-          duration: 2500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 2500,
-          useNativeDriver: true,
-        }),
-      ]).start(() => startPulse());
-    };
-
-    startPulse();
+    Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 1200,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
   }, []);
 
-  // Criação do Pedido
-  const createRequest = async (currentRadius: number) => {
-    try {
-      setLoading(true);
-      const resp = await BookingService.createRequest({
-        service_id: Number(serviceId),
-        lat: Number(lat),
-        lng: Number(lng),
-        radius_km: currentRadius,
-      });
-      setRequestId(resp.id);
-      setStatus(resp.status || 'requested');
-    } catch (err) {
-      console.error('Erro ao criar pedido:', err);
-      Alert.alert('Erro', 'Não foi possível iniciar o pedido de busca.');
-      router.back();
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Infinite Staggered Pulsing for Three Dots
   useEffect(() => {
-    createRequest(radius);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (fallbackIntervalRef.current) clearInterval(fallbackIntervalRef.current);
-    };
-  }, []);
-
-  // Cronómetro Regressivo
-  useEffect(() => {
-    if (!requestId) return;
-
-    timerRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          handleTimeout();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [requestId]);
-
-  // Escuta WebSocket e Fallback Polling lento
-  useEffect(() => {
-    if (!requestId) return;
-
-    // Subscrever mensagens WebSocket em tempo real para ação instantânea
-    const removeWsListener = addWebSocketListener((data) => {
-      // Verifica se a mensagem diz respeito a este pedido
-      if (data.request_id === requestId || (data.booking_id && data.type === 'booking_request_accepted')) {
-        if (data.type === 'booking_request_accepted') {
-          if (timerRef.current) clearInterval(timerRef.current);
-          if (fallbackIntervalRef.current) clearInterval(fallbackIntervalRef.current);
-          router.replace('/(tabs)/bookings');
-        } else if (data.type === 'booking_request_expired') {
-          if (timerRef.current) clearInterval(timerRef.current);
-          if (fallbackIntervalRef.current) clearInterval(fallbackIntervalRef.current);
-          Alert.alert('Sem barbeiros', 'Nenhum barbeiro aceitou o pedido nas redondezas.');
-          router.back();
-        }
-      }
-    });
-
-    // Fallback lento a cada 10 segundos apenas em caso de instabilidade de rede / quebra de socket
-    fallbackIntervalRef.current = setInterval(async () => {
-      try {
-        const req = await BookingService.getRequest(requestId);
-        setStatus(req.status || 'requested');
-        if (req.status === 'assigned') {
-          if (timerRef.current) clearInterval(timerRef.current);
-          if (fallbackIntervalRef.current) clearInterval(fallbackIntervalRef.current);
-          router.replace('/(tabs)/bookings');
-        } else if (req.status === 'expired' || req.status === 'cancelled') {
-          if (timerRef.current) clearInterval(timerRef.current);
-          if (fallbackIntervalRef.current) clearInterval(fallbackIntervalRef.current);
-          Alert.alert('Sem barbeiros', 'O pedido expirou ou foi cancelado.');
-          router.back();
-        }
-      } catch (err) {
-        console.error('Erro no fallback do pedido:', err);
-      }
-    }, 10000);
-
-    return () => {
-      removeWsListener();
-      if (fallbackIntervalRef.current) clearInterval(fallbackIntervalRef.current);
-    };
-  }, [requestId]);
-
-  const handleTimeout = async () => {
-    try {
-      if (requestId) {
-        await BookingService.cancelRequest(requestId);
-      }
-      Alert.alert(
-        'Tempo Limite Excedido',
-        'Não foi possível encontrar um barbeiro online a tempo. Queres tentar novamente expandindo o raio de busca?',
-        [
-          { text: 'Tentar com +5km', onPress: () => expandRadius() },
-          { text: 'Cancelar', onPress: () => router.back(), style: 'cancel' },
-        ]
+    const createDotAnimation = (scale: Animated.Value, opacity: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.parallel([
+            Animated.timing(scale, { toValue: 1.2, duration: 400, useNativeDriver: true }),
+            Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+          ]),
+          Animated.parallel([
+            Animated.timing(scale, { toValue: 0.4, duration: 400, useNativeDriver: true }),
+            Animated.timing(opacity, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+          ]),
+        ])
       );
-    } catch (err) {
-      console.error('Erro ao expirar pedido:', err);
-      router.back();
-    }
-  };
+    };
+
+    const anim1 = createDotAnimation(dot1Scale, dot1Opacity, 0);
+    const anim2 = createDotAnimation(dot2Scale, dot2Opacity, 200);
+    const anim3 = createDotAnimation(dot3Scale, dot3Opacity, 400);
+
+    anim1.start();
+    anim2.start();
+    anim3.start();
+
+    return () => {
+      anim1.stop();
+      anim2.stop();
+      anim3.stop();
+    };
+  }, []);
+
+  // Real-time BookingRequest dispatcher & WS listener
+  useEffect(() => {
+    let isActive = true;
+    let wsCleanup: (() => void) | null = null;
+    let pollInterval: NodeJS.Timeout | null = null;
+
+    const startSearch = async () => {
+      try {
+        console.log('[Searching] Criando request para o serviço:', serviceId);
+        const req = await BookingService.createRequest({
+          service_id: Number(serviceId),
+          lat: parseFloat(lat || '-9.1333'),
+          lng: parseFloat(lng || '13.4833'),
+          radius_km: 50,
+        });
+
+        if (!isActive) return;
+
+        console.log('[Searching] Request criado com ID:', req.id);
+        setRequestId(req.id);
+        requestIdRef.current = req.id;
+
+        // WebSocket listener
+        wsCleanup = addWebSocketListener((data) => {
+          if (!isActive) return;
+          console.log('[Searching] WS Mensagem recebida:', data);
+          
+          if (data.type === 'booking_request_accepted' && data.request_id === req.id) {
+            console.log('[Searching] Pedido aceite pelo barbeiro!', data);
+            
+            if (pollInterval) clearInterval(pollInterval);
+            if (wsCleanup) wsCleanup();
+
+            router.replace({
+              pathname: '/booking/tracking',
+              params: {
+                lat,
+                lng,
+                serviceId,
+                serviceName,
+                price,
+                mode,
+                deliveryFee,
+                bookingId: String(data.booking_id),
+                barberId: String(data.request_id),
+                barberName: data.barbershop_name || 'Barbeiro Korta',
+                barberRating: '4.9',
+                totalPrice
+              }
+            });
+          } else if (data.type === 'booking_request_expired' && data.request_id === req.id) {
+            console.log('[Searching] Pedido expirou.');
+            Alert.alert('Esgotado', 'Não foi possível encontrar barbeiros disponíveis neste momento.');
+            if (pollInterval) clearInterval(pollInterval);
+            if (wsCleanup) wsCleanup();
+            router.replace('/(tabs)');
+          }
+        });
+
+        // Polling de fallback (caso o WS falhe)
+        pollInterval = setInterval(async () => {
+          if (!isActive) return;
+          try {
+            const reqStatus = await BookingService.getRequest(req.id);
+            console.log('[Searching] Polling status:', reqStatus.status);
+            
+            if (reqStatus.status === 'assigned') {
+              const myBookings = await BookingService.myBookings();
+              const matchingBooking = myBookings.find(
+                (b: any) => b.service_id === Number(serviceId) && (b.status === 'pending' || b.status === 'confirmed')
+              );
+
+              if (matchingBooking) {
+                console.log('[Searching] Polling encontrou booking:', matchingBooking.id);
+                if (pollInterval) clearInterval(pollInterval);
+                if (wsCleanup) wsCleanup();
+
+                router.replace({
+                  pathname: '/booking/tracking',
+                  params: {
+                    lat,
+                    lng,
+                    serviceId,
+                    serviceName,
+                    price,
+                    mode,
+                    deliveryFee,
+                    bookingId: String(matchingBooking.id),
+                    barberId: String(matchingBooking.barbershop_id),
+                    barberName: matchingBooking.barbershop?.name || 'Barbeiro Korta',
+                    barberRating: String(matchingBooking.barbershop?.average_rating || '4.9'),
+                    totalPrice
+                  }
+                });
+              }
+            } else if (reqStatus.status === 'expired' || reqStatus.status === 'cancelled') {
+              if (pollInterval) clearInterval(pollInterval);
+              if (wsCleanup) wsCleanup();
+              Alert.alert('Status', reqStatus.status === 'expired' ? 'O pedido expirou.' : 'O pedido foi cancelado.');
+              router.replace('/(tabs)');
+            }
+          } catch (e) {
+            console.error('[Searching] Erro no polling de fallback:', e);
+          }
+        }, 3000);
+
+      } catch (err) {
+        console.error('[Searching] Erro ao criar request:', err);
+        Alert.alert('Erro', 'Erro ao submeter o pedido de serviço. Verifique a sua ligação.');
+        router.replace('/(tabs)');
+      }
+    };
+
+    startSearch();
+
+    return () => {
+      isActive = false;
+      if (wsCleanup) wsCleanup();
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [serviceId, lat, lng]);
 
   const handleCancel = async () => {
-    try {
-      setLoading(true);
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (fallbackIntervalRef.current) clearInterval(fallbackIntervalRef.current);
-
-      if (requestId) {
-        await BookingService.cancelRequest(requestId);
+    if (requestIdRef.current) {
+      try {
+        console.log('[Searching] Cancelando request ID:', requestIdRef.current);
+        await BookingService.cancelRequest(requestIdRef.current);
+      } catch (err) {
+        console.error('Erro ao cancelar pedido:', err);
       }
-      router.back();
-    } catch (err) {
-      console.error('Erro ao cancelar pedido:', err);
-      router.back();
-    } finally {
-      setLoading(false);
     }
+    router.replace('/(tabs)');
   };
 
-  const expandRadius = async () => {
-    try {
-      setLoading(true);
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (fallbackIntervalRef.current) clearInterval(fallbackIntervalRef.current);
-
-      if (requestId) {
-        try {
-          await BookingService.cancelRequest(requestId);
-        } catch (e) {
-          // ignora erro ao tentar cancelar
-        }
-      }
-
-      const nextRadius = radius + 5;
-      setRadius(nextRadius);
-      setCountdown(60); // reset countdown
-
-      await createRequest(nextRadius);
-    } catch (err) {
-      console.error('Erro ao expandir raio:', err);
-      Alert.alert('Erro', 'Não foi possível atualizar o raio de busca.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatTime = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const remainingSecs = secs % 60;
-    return `${mins}:${remainingSecs < 10 ? '0' : ''}${remainingSecs}`;
-  };
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>A procurar barbeiro…</Text>
-        <Text style={styles.subtitle}>{serviceName ?? 'Serviço Selecionado'}</Text>
-      </View>
+    <LinearGradient
+      colors={['#000000', '#18181b']}
+      style={styles.gradient}
+    >
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
 
-      <View style={styles.centerArea}>
-        {/* Efeito Radar Pulsante */}
-        <View style={styles.radarContainer}>
-          <Animated.View
-            style={[
-              styles.radarRing,
-              {
-                transform: [{ scale: pulseAnim }],
-                opacity: opacityAnim,
-              },
-            ]}
-          />
-          <View style={styles.radarCenter}>
-            <Text style={styles.timerText}>{formatTime(countdown)}</Text>
-            <Compass size={24} color={Colors.primary} style={styles.radarIcon} />
+        <View style={styles.content}>
+          {/* Rotating Spinner */}
+          <View style={styles.spinnerContainer}>
+            <Animated.View style={{ transform: [{ rotate: spin }] }}>
+              <Loader2 size={64} color="#f59e0b" strokeWidth={1.5} />
+            </Animated.View>
+          </View>
+
+          {/* Texts */}
+          <View style={styles.textContainer}>
+            <Text style={styles.title}>A procurar barbeiro...</Text>
+            <Text style={styles.subtitle}>Estamos a encontrar o melhor barbeiro para ti</Text>
+          </View>
+
+          {/* Staggered Pulsing Dots */}
+          <View style={styles.dotsContainer}>
+            <Animated.View style={[styles.dot, { transform: [{ scale: dot1Scale }], opacity: dot1Opacity }]} />
+            <Animated.View style={[styles.dot, { transform: [{ scale: dot2Scale }], opacity: dot2Opacity }]} />
+            <Animated.View style={[styles.dot, { transform: [{ scale: dot3Scale }], opacity: dot3Opacity }]} />
           </View>
         </View>
 
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>Raio de busca: {radius} km</Text>
+        {/* Cancel Button */}
+        <View style={styles.footer}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.cancelButton,
+              pressed && styles.cancelButtonPressed
+            ]}
+            onPress={handleCancel}
+          >
+            <Text style={styles.cancelText}>Cancelar</Text>
+          </Pressable>
         </View>
 
-        <Text style={styles.hintText}>
-          A enviar pedido para os barbeiros ativos próximos de ti. Por favor, aguarda.
-        </Text>
-      </View>
-
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.expandButton}
-          onPress={expandRadius}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color={Colors.primaryForeground} />
-          ) : (
-            <>
-              <Text style={styles.expandButtonText}>Expandir Raio (+5km)</Text>
-              <ArrowRight size={18} color={Colors.primaryForeground} />
-            </>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={handleCancel}
-          disabled={loading}
-        >
-          <Text style={styles.cancelButtonText}>Cancelar Pedido</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
-  header: {
+  content: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: Spacing.xl,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.xl + 10,
+  },
+  spinnerContainer: {
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textContainer: {
+    alignItems: 'center',
+    gap: 8,
   },
   title: {
     fontSize: 24,
     fontWeight: '900',
-    color: Colors.foreground,
-    letterSpacing: 0.5,
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
-    color: Colors.mutedForeground,
-    marginTop: Spacing.xs,
-  },
-  centerArea: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-  },
-  radarContainer: {
-    width: 180,
-    height: 180,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.xl,
-  },
-  radarRing: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(212, 175, 55, 0.08)',
-  },
-  radarCenter: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Shadows.elegant,
-  },
-  timerText: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: Colors.foreground,
-    fontVariant: ['tabular-nums'],
-  },
-  radarIcon: {
-    marginTop: 4,
-  },
-  badge: {
-    backgroundColor: Colors.surface,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.md,
-  },
-  badgeText: {
-    color: Colors.primary,
-    fontWeight: '800',
-    fontSize: 13,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  hintText: {
-    color: Colors.mutedForeground,
-    textAlign: 'center',
     fontSize: 14,
+    color: '#a1a1aa',
+    textAlign: 'center',
     lineHeight: 20,
-    paddingHorizontal: Spacing.xl,
+    fontWeight: '500',
   },
-  footer: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-  },
-  expandButton: {
+  dotsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    padding: Spacing.md,
-    borderRadius: Radius.lg,
-    gap: Spacing.sm,
-    ...Shadows.gold,
+    gap: 10,
+    height: 24,
   },
-  expandButtonText: {
-    color: Colors.primaryForeground,
-    fontWeight: '900',
-    fontSize: 16,
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#f59e0b',
+  },
+  footer: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
   },
   cancelButton: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.md,
-    borderRadius: Radius.lg,
+    backgroundColor: '#18181b',
+    borderWidth: 1.5,
+    borderColor: '#27272a',
+    height: 56,
+    borderRadius: Radius.full,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  cancelButtonText: {
-    color: Colors.error,
-    fontWeight: '800',
+  cancelButtonPressed: {
+    opacity: 0.8,
+  },
+  cancelText: {
+    color: '#ef4444',
     fontSize: 15,
+    fontWeight: '800',
   },
 });

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, Spacing, Radius, Shadows } from '../src/theme';
-import { Scissors } from 'lucide-react-native';
+import { Scissors, ChevronRight } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -112,6 +112,14 @@ export default function WelcomeScreen() {
           </Animated.View>
 
           <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
+            <TouchableOpacity
+              style={styles.loginLink}
+              activeOpacity={0.7}
+              onPress={() => router.push('/(auth)/login')}
+            >
+              <Text style={styles.loginLinkText}>Já tenho uma conta</Text>
+              <ChevronRight size={16} color="#71717a" strokeWidth={2} />
+            </TouchableOpacity>
             <Text style={styles.version}>v1.0.0 — Luanda, Angola 🇦🇴</Text>
           </Animated.View>
         </View>
@@ -191,6 +199,19 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     paddingBottom: Spacing.xl,
+    gap: 12,
+  },
+  loginLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  loginLinkText: {
+    color: '#71717a',
+    fontSize: 14,
+    fontWeight: '600',
   },
   button: {
     backgroundColor: '#f59e0b',
@@ -209,8 +230,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   version: {
-    marginTop: Spacing.xl,
-    color: '#71717a', // Zinc-500
+    color: '#3f3f46',
     fontSize: 11,
     letterSpacing: 1,
   }
